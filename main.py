@@ -18,18 +18,26 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 
 @app.post("/transcribe-deepgram")
 async def transcribe_deepgram(file: UploadFile = File(...)):
+    print("Received file:", file.filename, file.content_type)
     audio = await file.read()
+    print("Audio length (bytes):", len(audio))
+
     headers = {
         "Authorization": f"Token {DEEPGRAM_API_KEY}",
-        "Content-Type": "audio/webm"
+        "Content-Type": "audio/webm"  # double-check if your blob is actually webm
     }
+
     response = requests.post(
         "https://api.deepgram.com/v1/listen",
         headers=headers,
         data=audio
     )
+    
     try:
         data = response.json()
+        print("Deepgram response:", data)
+        if "results" not in data:
+            return {"text": "", "error": f"Missing 'results' in response: {data}"}
         transcript = data["results"]["channels"][0]["alternatives"][0]["transcript"]
         return {"text": transcript}
     except Exception as e:
