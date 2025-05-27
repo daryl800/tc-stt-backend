@@ -15,6 +15,10 @@ app.add_middleware(
 )
 
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+if DEEPGRAM_API_KEY:
+    print("DEEPGRAM_API_KEY:", DEEPGRAM_API_KEY)
+else:
+    print("DEEPGRAM_API_KEY not found.")
 
 @app.post("/transcribe-deepgram")
 async def transcribe_deepgram(file: UploadFile = File(...)):
