@@ -14,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-if DEEPGRAM_API_KEY:
-    print("DEEPGRAM_API_KEY:", DEEPGRAM_API_KEY)
+deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
+if deepgram_api_key:
+    print("DEEPGRAM_API_KEY:", deepgram_api_key)
 else:
     print("DEEPGRAM_API_KEY not found.")
 
@@ -27,7 +27,7 @@ async def transcribe_deepgram(file: UploadFile = File(...)):
     print("Audio length (bytes):", len(audio))
 
     headers = {
-        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Authorization": f"Token {deepgram_api_key}",
         "Content-Type": "audio/webm"  # double-check if your blob is actually webm
     }
 
