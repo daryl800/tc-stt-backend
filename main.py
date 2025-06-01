@@ -28,47 +28,32 @@ if deepgram_api_key:
 else:
     print("DEEPGRAM_API_KEY not found.")
 
-@app.post("/transcribe-deepgram")
-async def transcribe_deepgram(file: UploadFile = File(...)):
-    audio = await file.read()
-    print(f"Audio size: {len(audio)} bytes, Content-Type: {file.content_type}")
+from fastapi import FastAPI, File, UploadFile
+from tencentcloud.common import credential
+from tencentcloud.asr.v20190614 import asr_client, models
+import base64
 
-    headers = {
-        "Authorization": f"Token {deepgram_api_key}",
-        "Content-Type": file.content_type or "audio/webm"
-    }
+app = FastAPI()
 
-    # Minimal parameters for Cantonese
+@app.post("/transcribe-tencent")
+async def transcribe_tencent(audio: UploadFile = File(...)):
+    audio_bytes = await audio.read()
+    audio_base64 = base64.b64encode(audio_bytes).decode()
+
+    cred = credential.Credential("TENCENT_SECRET_ID", "TENCENT_SECRET_KEY")  # Replace with your actual Tencent Cloud credentials
+    client = asr_client.AsrClient(cred, "ap-hongkong")
+
+    req = models.CreateRecTaskRequest()
     params = {
-        "language": "zh-HK",  # Use "zh-HK" for Cantonese
-        "punctuate": "true",
-        "model": "nova-2",  # Use "nova-2" for Cantonese
-        "smart_format": "true",
-        "interim_results": "false",  # Set to True if you want real-time results
+        "EngineModelType": "16k_zh",  # or 16k_en, 16k_ca for Cantonese
+        "ChannelNum": 1,
+        "ResTextFormat": 0,
+        "SourceType": 1,
+        "Data": audio_base64,
+        "DataLen": len(audio_bytes)
     }
+    req.from_json_string(json.dumps(params))
 
-    response = requests.post(
-        "https://api.deepgram.com/v1/listen",
-        headers=headers,
-        params=params,
-        data=audio
-    )
-    
-    data = response.json()
-    print("Full Deepgram response:", data)
-
-    if "results" not in data:
-        return {
-            "text": "",
-            "error": "Deepgram returned no results",
-            "full_response": data,
-            "debug_info": {
-                "audio_size": len(audio),
-                "content_type": file.content_type,
-                "params_used": params
-            }
-        }
-
-    transcript = data["results"]["channels"][0]["alternatives"][0]["transcript"]
-    return {"text": transcript}
+    resp = client.CreateRecTask(req)
+    return {"task_id": resp.Data.TaskId}
 
