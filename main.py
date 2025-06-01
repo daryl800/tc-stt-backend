@@ -35,6 +35,15 @@ import base64
 
 app = FastAPI()
 
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Hello from Tencent backend"}
+
+
 @app.post("/transcribe-tencent")
 async def transcribe_tencent(audio: UploadFile = File(...)):
     audio_bytes = await audio.read()
