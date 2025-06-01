@@ -1,8 +1,10 @@
-
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import requests
 import os
+import json
+from tencentcloud.common import credential
+from tencentcloud.asr.v20190614 import asr_client, models
+import base64
 
 app = FastAPI()
 
@@ -14,42 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# This will work in Railway without python-dotenv
-deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
-
-# For local development, you could add this (optional):
-if not deepgram_api_key and os.path.exists(".env"):
-    from dotenv import load_dotenv  # Only import if needed
-    load_dotenv()
-    deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
-
-if deepgram_api_key:
-    print("DEEPGRAM_API_KEY:", deepgram_api_key)
-else:
-    print("DEEPGRAM_API_KEY not found.")
-
-from fastapi import FastAPI, File, UploadFile
-from tencentcloud.common import credential
-from tencentcloud.asr.v20190614 import asr_client, models
-import base64
-
-app = FastAPI()
-
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "Hello from Tencent backend"}
-
-
 @app.post("/transcribe-tencent")
 async def transcribe_tencent(audio: UploadFile = File(...)):
     audio_bytes = await audio.read()
     audio_base64 = base64.b64encode(audio_bytes).decode()
 
-    cred = credential.Credential("TENCENT_SECRET_ID", "TENCENT_SECRET_KEY")  # Replace with your actual Tencent Cloud credentials
+    cred = credential.Credential(
+        os.getenv("TENCENT_SECRET_ID"),
+        os.getenv("TENCENT_SECRET_KEY")
+    )
     client = asr_client.AsrClient(cred, "ap-hongkong")
 
     req = models.CreateRecTaskRequest()
@@ -65,4 +40,3 @@ async def transcribe_tencent(audio: UploadFile = File(...)):
 
     resp = client.CreateRecTask(req)
     return {"task_id": resp.Data.TaskId}
-
