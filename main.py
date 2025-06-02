@@ -21,7 +21,7 @@ app.add_middleware(
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
-@app.post("/transcribe-cantonese-sync")
+@app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         # Read the audio file bytes and encode to base64
