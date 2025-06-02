@@ -1,10 +1,11 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from tencentcloud.common import credential
-from tencentcloud.asr.v20190614 import asr_client, models
 import base64
 import json
 import os
+from tencentcloud.common import credential
+from tencentcloud.asr.v20190614 import asr_client, models
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 
 app = FastAPI()
 
