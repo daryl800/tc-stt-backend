@@ -39,9 +39,9 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         voice_format = audio.filename.split(".")[-1].lower()
 
         params = {
-            "ProjectId": 0,
+            "ProjectId": "0",
             "SubServiceType": 2,
-            "EngSerViceType": "16k_yue",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
+            "EngSerViceType": "16k_yue",  
             "SourceType": 1,  # 1 = data in base64
             "VoiceFormat": voice_format,  # match your audio format
             "UsrAudioKey": "test-key",
