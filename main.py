@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Optional: Enable CORS
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Replace with your real Tencent credentials
+# Tencent Cloud credentials
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
@@ -29,12 +29,16 @@ def read_root():
 @app.post("/transcribe-cantonese")
 async def transcribe(file: UploadFile = File(...)):
     try:
-        # Save uploaded file temporarily
+        # Read audio data
+        audio_data = await file.read()
+        print(f"Audio size: {len(audio_data)} bytes")
+
+        # Save temporarily
         file_location = f"/tmp/{file.filename}"
         with open(file_location, "wb") as f:
-            f.write(await file.read())
+            f.write(audio_data)
 
-        # Set up credentials
+        # Tencent client setup
         cred = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
 
@@ -42,15 +46,19 @@ async def transcribe(file: UploadFile = File(...)):
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh",  # ✅ must include this
+            "EngSerViceType": "16k_zh-cantonese",  # ✅ USE CANTONESE ENGINE
             "SourceType": 1,
             "VoiceFormat": "mp3",
             "UsrAudioKey": "memory-clip",
-            "Data": str(base64.b64encode(open(file_location, "rb").read()), "utf-8"),
+            "Data": base64.b64encode(audio_data).decode("utf-8"),
         }
         req.from_json_string(json.dumps(params))
 
         resp = client.SentenceRecognition(req)
+
+        # Clean up temp file
+        os.remove(file_location)
+
         return {"text": resp.Result}
 
     except TencentCloudSDKException as err:
