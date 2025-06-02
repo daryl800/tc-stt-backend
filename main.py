@@ -24,35 +24,39 @@ TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 @app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
-        # Read the audio file bytes and encode to base64
+        # Read and validate audio
         audio_bytes = await audio.read()
-        audio_base64 = base64.b64encode(audio_bytes).decode()
+        if len(audio_bytes) == 0:
+            raise HTTPException(400, "Empty audio file")
 
-        # Create Tencent credential and client
-        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-        client = asr_client.AsrClient(cred, "ap-guangzhou")  # region
+        # Convert to base64
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-        # Prepare the synchronous recognition request
-        req = models.SentenceRecognitionRequest()
-
-        # Extract file extension (e.g., "webm" from "audio.webm")
+        # Dynamic voice format (e.g., "webm" or "wav")
         voice_format = audio.filename.split(".")[-1].lower()
 
+        # Tencent client setup
+        cred = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+        client = asr_client.AsrClient(cred, "ap-guangzhou")
+
+        # Configure request
+        req = models.SentenceRecognitionRequest()
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-TW",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
-            "SourceType": 1,  # 1 = data in base64
-            "VoiceFormat": voice_format,  # match your audio format
-            "UsrAudioKey": "test-key",
+            "EngSerViceType": "16k_zh-TW",  # Best for Cantonese
+            "SourceType": 1,
+            "VoiceFormat": voice_format,      # Dynamic (webm, wav, etc.)
+            "UsrAudioKey": "cantonese-clip",
             "Data": audio_base64,
         }
-
         req.from_json_string(json.dumps(params))
 
-        # Call the synchronous recognition API
+        # Call API
         resp = client.SentenceRecognition(req)
         return {"transcription": resp.Result}
 
+    except TencentCloudSDKException as e:
+        raise HTTPException(500, f"Tencent Cloud Error: {e.message}")
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(500, f"Server Error: {str(e)}")
