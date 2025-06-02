@@ -35,12 +35,15 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Prepare the synchronous recognition request
         req = models.SentenceRecognitionRequest()
 
+        # Extract file extension (e.g., "webm" from "audio.webm")
+        voice_format = audio.filename.split(".")[-1].lower()
+
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
+            "EngSerViceType": "16k_zh-TW",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
             "SourceType": 1,  # 1 = data in base64
-            "VoiceFormat": "mp3",  # match your audio format
+            "VoiceFormat": voice_format,  # match your audio format
             "UsrAudioKey": "test-key",
             "Data": audio_base64,
         }
