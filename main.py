@@ -46,7 +46,7 @@ async def transcribe(file: UploadFile = File(...)):
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-cantonese",  # ✅ USE CANTONESE ENGINE
+            "EngSerViceType": "16k_zh-PY", 
             "SourceType": 1,
             "VoiceFormat": "mp3",
             "UsrAudioKey": "memory-clip",
