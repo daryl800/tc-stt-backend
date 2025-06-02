@@ -7,7 +7,6 @@ import json
 import os
 import traceback  # for better error debugging
 from tempfile import NamedTemporaryFile
-import ffmpeg
 
 
 app = FastAPI()
@@ -48,14 +47,14 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Saved input file to {input_path}")
 
         # Convert if WebM
-        if original_ext == "webm":
-            with NamedTemporaryFile(delete=False, suffix=".wav") as output_tmp:
-                output_path = output_tmp.name
+        # if original_ext == "webm":
+        #     with NamedTemporaryFile(delete=False, suffix=".wav") as output_tmp:
+        #         output_path = output_tmp.name
 
-            print(f"[INFO] Converting WebM to WAV: {input_path} → {output_path}")
-            ffmpeg.input(input_path).output(output_path, format='wav', ar='16000', ac=1).run(overwrite_output=True)
-        else:
-            output_path = input_path  # Use original
+        #     print(f"[INFO] Converting WebM to WAV: {input_path} → {output_path}")
+        #     ffmpeg.input(input_path).output(output_path, format='wav', ar='16000', ac=1).run(overwrite_output=True)
+        # else:
+        #     output_path = input_path  # Use original
 
         # Read and encode audio
         with open(output_path, "rb") as f:
