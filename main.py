@@ -39,7 +39,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         voice_format = audio.filename.split(".")[-1].lower()
 
         params = {
-            "ProjectId": "0",
+            "ProjectId": 0,
             "SubServiceType": 2,
             "EngSerViceType": "16k_yue",  
             "SourceType": 1,  # 1 = data in base64
@@ -47,6 +47,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
             "UsrAudioKey": "test-key",
             "Data": audio_base64,
         }
+
+        print (f"[INFO] Audio file: {audio.filename}, Size: {len(audio_bytes)} bytes, Format: {voice_format}")
 
         req.from_json_string(json.dumps(params))
 
