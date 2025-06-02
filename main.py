@@ -22,7 +22,7 @@ app.add_middleware(
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
-@app.post("/transcribe-tencent")
+@app.post("/transcribe-cantonese")
 async def transcribe_tencent(audio: UploadFile = File(...)):
     # Step 1: Read and encode audio
     audio_bytes = await audio.read()
