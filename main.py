@@ -42,28 +42,19 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # Configure request
         req = models.SentenceRecognitionRequest()
-
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_yue",  
+            "EngSerViceType": "16k_yue",
             "SourceType": 1,
             "VoiceFormat": voice_format,
             "UsrAudioKey": "test-key",
             "Data": audio_base64,
         }
-
         req.from_json_string(json.dumps(params))
 
-        # 🔍 Debug prints before sending the request
-        print("📤 VoiceFormat:", voice_format)
-        print("📤 EngSerViceType:", params["EngSerViceType"])
-        print("📤 Audio Length (bytes):", len(audio_bytes))
-        print("📤 Base64 Length (chars):", len(audio_base64))
-        
         # Call API
         resp = client.SentenceRecognition(req)
-        
         return {"transcription": resp.Result}
 
     except TencentCloudSDKException as e:
