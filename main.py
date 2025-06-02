@@ -46,7 +46,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh",  # 👈 Safe default
+            "EngSerViceType": "16k_yue",  
             "SourceType": 1,
             "VoiceFormat": voice_format,
             "UsrAudioKey": "test-key",
