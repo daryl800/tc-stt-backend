@@ -25,28 +25,31 @@ def read_root():
     return {"message": "TECENT SentenceRecognition Backend is running!"}
 
 @app.post("/transcribe-cantonese")
-async def transcribe_cantonese(file: UploadFile = File(...)):
-    # Read file into memory
-    file_bytes = await file.read()
+async def transcribe(file: UploadFile = File(...)):
+    try:
+        # Save uploaded file temporarily
+        file_location = f"/tmp/{file.filename}"
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
 
-    # Encode audio to base64
-    audio_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        # Set up credentials
+        cred = Credential(os.getenv("TC_SECRET_ID"), os.getenv("TC_SECRET_KEY"))
+        client = asr_client.AsrClient(cred, "ap-guangzhou")
 
-    # Setup credentials and client
-    cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-    client = asr_client.AsrClient(cred, "ap-guangzhou")
+        req = models.SentenceRecognitionRequest()
+        params = {
+            "ProjectId": 0,
+            "SubServiceType": 2,
+            "EngSerViceType": "16k_zh",  # ✅ must include this
+            "SourceType": 1,
+            "VoiceFormat": "mp3",
+            "UsrAudioKey": "memory-clip",
+            "Data": str(base64.b64encode(open(file_location, "rb").read()), "utf-8"),
+        }
+        req.from_json_string(json.dumps(params))
 
-    # Configure SentenceRecognition request
-    req = models.SentenceRecognitionRequest()
-    req.EngineModelType = "16k_zh-HK"  # Cantonese
-    req.ChannelNum = 1
-    req.ResTextFormat = 0  # 0 = plain text
-    req.SourceType = 1     # 1 = base64
-    req.Data = audio_base64
-    req.DataLen = len(file_bytes)
+        resp = client.SentenceRecognition(req)
+        return {"text": resp.Result}
 
-    # Send request
-    resp = client.SentenceRecognition(req)
-
-    # Return response
-    return {"transcript": resp.Result}
+    except TencentCloudSDKException as err:
+        return {"error": str(err)}
