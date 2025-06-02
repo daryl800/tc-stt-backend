@@ -35,7 +35,7 @@ async def transcribe(file: UploadFile = File(...)):
             f.write(await file.read())
 
         # Set up credentials
-        cred = Credential(os.getenv("TC_SECRET_ID"), os.getenv("TC_SECRET_KEY"))
+        cred = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
 
         req = models.SentenceRecognitionRequest()
