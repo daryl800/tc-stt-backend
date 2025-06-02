@@ -44,9 +44,9 @@ async def transcribe(file: UploadFile = File(...)):
 
         req = models.SentenceRecognitionRequest()
         params = {
-            "ProjectId": 0,
+            "ProjectId": "0",
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-PY", 
+            "EngineModelType": "16k_zh-PY", 
             "SourceType": 1,
             "VoiceFormat": "mp3",
             "UsrAudioKey": "memory-clip",
