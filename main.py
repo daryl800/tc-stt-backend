@@ -35,7 +35,7 @@ async def transcribe_tencent(audio: UploadFile = File(...)):
     # Step 3: Create transcription task
     req = models.CreateRecTaskRequest()
     params = {
-        "EngineModelType": "16k_ca",  # 16k_zh for Mandarin, 16k_ca for Cantonese
+        "EngineModelType": "16k_zh-HK",  # 16k_zh for Mandarin, 16k_ca for Cantonese
         "ChannelNum": 1,
         "ResTextFormat": 0,
         "SourceType": 1,
