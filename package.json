@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15"
+  },
+  "devDependencies": {
+    "@types/ffmpeg": "^1.0.7"
+  }
+}
