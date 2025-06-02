@@ -4,63 +4,52 @@ from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models
 import base64
 import json
-import asyncio
 import os
 
 app = FastAPI()
 
-# CORS setup
+# Enable CORS for your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Add your frontend URL here
+    allow_origins=["http://localhost:5173"],  # Adjust to your frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load Tencent credentials from environment or .env
+# Tencent Cloud credentials from environment variables
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
-@app.post("/transcribe-cantonese")
-async def transcribe_tencent(audio: UploadFile = File(...)):
-    # Step 1: Read and encode audio
-    audio_bytes = await audio.read()
-    audio_base64 = base64.b64encode(audio_bytes).decode()
+@app.post("/transcribe-cantonese-sync")
+async def transcribe_sync(audio: UploadFile = File(...)):
+    try:
+        # Read the audio file bytes and encode to base64
+        audio_bytes = await audio.read()
+        audio_base64 = base64.b64encode(audio_bytes).decode()
 
-    # Step 2: Create Tencent client
-    cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-    client = asr_client.AsrClient(cred, "ap-hongkong")
+        # Create Tencent credential and client
+        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+        client = asr_client.AsrClient(cred, "ap-guangzhou")  # region
 
-    # Step 3: Create transcription task
-    req = models.CreateRecTaskRequest()
-    params = {
-        "EngineModelType": "16k_zh-PY", # Use "16k_zh-PY" for Cantonese
-        "ChannelNum": 1,
-        "ResTextFormat": 0,
-        "SourceType": 1,
-        "Data": audio_base64,
-        "DataLen": len(audio_bytes),
-    }
-    req.from_json_string(json.dumps(params))
-    resp = client.CreateRecTask(req)
-    task_id = resp.Data.TaskId
+        # Prepare the synchronous recognition request
+        req = models.SentenceRecognitionRequest()
 
-    # Step 4: Polling until transcription is done (max 20s)
-    result = None
-    for _ in range(20):  # ~20 seconds max
-        await asyncio.sleep(1)
-        status_req = models.DescribeTaskStatusRequest()
-        status_req.TaskId = task_id
-        status_resp = client.DescribeTaskStatus(status_req)
+        params = {
+            "ProjectId": 0,
+            "SubServiceType": 2,
+            "EngSerViceType": "16k_zh",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
+            "SourceType": 1,  # 1 = data in base64
+            "VoiceFormat": "mp3",  # match your audio format
+            "UsrAudioKey": "test-key",
+            "Data": audio_base64,
+        }
 
-        if status_resp.Data.StatusStr == "success":
-            result = status_resp.Data.Result
-            break
-        elif status_resp.Data.StatusStr == "failed":
-            return {"error": "Tencent transcription failed."}
+        req.from_json_string(json.dumps(params))
 
-    if result:
-        return {"transcription": result}
-    else:
-        return {"error": "Timeout: transcription not ready after 20s."}
+        # Call the synchronous recognition API
+        resp = client.SentenceRecognition(req)
+        return {"transcription": resp.Result}
+
+    except Exception as e:
+        return {"error": str(e)}
