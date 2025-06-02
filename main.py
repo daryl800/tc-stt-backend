@@ -16,8 +16,8 @@ app.add_middleware(
 )
 
 # Replace with your real Tencent credentials
-TENCENT_SECRET_ID = "TENCENT_SECRET_ID"
-TENCENT_SECRET_KEY = "TENCENT_SECRET_KEY"
+TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
+TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
 @app.get("/")
 def read_root():
