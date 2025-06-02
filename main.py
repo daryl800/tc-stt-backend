@@ -1,69 +1,58 @@
-import os
-import json
-import base64
-from fastapi import FastAPI, UploadFile, File, HTTPException  # Fixed import
-from tencentcloud.asr.v20190614 import asr_client, models
-from tencentcloud.common import credential  # Fixed import
-from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from tencentcloud.common import credential
+from tencentcloud.asr.v20190614 import asr_client, models
+import base64
+import json
+import os
 
 app = FastAPI()
 
-# CORS setup
+# Enable CORS for your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173"],  # Adjust to your frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Tencent Cloud credentials
+# Tencent Cloud credentials from environment variables
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 
 @app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
-        # Read and validate audio
+        # Read the audio file bytes and encode to base64
         audio_bytes = await audio.read()
-        if len(audio_bytes) == 0:
-            raise HTTPException(status_code=400, detail="Empty audio file")
+        audio_base64 = base64.b64encode(audio_bytes).decode()
 
-        # Convert to base64
-        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+        # Create Tencent credential and client
+        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+        client = asr_client.AsrClient(cred, "ap-guangzhou")  # region
 
-        # Dynamic voice format
+        # Prepare the synchronous recognition request
+        req = models.SentenceRecognitionRequest()
+
+        # Extract file extension (e.g., "webm" from "audio.webm")
         voice_format = audio.filename.split(".")[-1].lower()
 
-        # Initialize Tencent client (CORRECTED)
-        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-        client = asr_client.AsrClient(cred, "ap-guangzhou")
-
-        # Configure request
-        req = models.SentenceRecognitionRequest()
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_yue",
-            "SourceType": 1,
-            "VoiceFormat": voice_format,
+            "EngSerViceType": "16k_yue",  # 16k_zh for Mandarin, or use the correct model for Cantonese if available
+            "SourceType": 1,  # 1 = data in base64
+            "VoiceFormat": voice_format,  # match your audio format
             "UsrAudioKey": "test-key",
             "Data": audio_base64,
         }
+
         req.from_json_string(json.dumps(params))
 
-        # Call API
+        # Call the synchronous recognition API
         resp = client.SentenceRecognition(req)
         return {"transcription": resp.Result}
 
-    except TencentCloudSDKException as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Tencent Cloud Error: {e.message}"
-        )
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Server Error: {str(e)}"
-        )
+        return {"error": str(e)}
