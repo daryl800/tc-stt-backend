@@ -31,32 +31,29 @@ else:
 def read_root():
     return {"message": "Tecent ASR sync version backend is running"}
 
+import traceback
+
 @app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         print(f"[INFO] Received file: {audio.filename}")
 
-        # Read the audio file bytes and encode to base64
+        # Read and encode audio
         audio_bytes = await audio.read()
         print(f"[INFO] Read {len(audio_bytes)} bytes from file.")
-
         audio_base64 = base64.b64encode(audio_bytes).decode()
-
-        # Extract file extension (e.g., "webm" from "audio.webm")
         voice_format = audio.filename.split(".")[-1].lower()
         print(f"[INFO] Detected audio format: {voice_format}")
 
-        # Create Tencent credential and client
+        # Tencent ASR setup
         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
 
-        # Prepare the synchronous recognition request
         req = models.SentenceRecognitionRequest()
-
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_yue",  
+            "EngSerViceType": "16k_yue",
             "SourceType": 1,
             "VoiceFormat": voice_format,
             "UsrAudioKey": "test-key",
@@ -72,5 +69,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
-        traceback.print_exc()
+        print(f"[ERROR] Exception: {str(e)}")
+        traceback_str = traceback.format_exc()
+        print(f"[ERROR] Traceback:\n{traceback_str}")
         return {"error": str(e)}
