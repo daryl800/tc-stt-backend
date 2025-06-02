@@ -6,6 +6,9 @@ import base64
 import json
 import os
 import traceback  # for better error debugging
+from tempfile import NamedTemporaryFile
+import ffmpeg
+
 
 app = FastAPI()
 
@@ -31,19 +34,37 @@ else:
 def read_root():
     return {"message": "Tecent ASR sync version backend is running"}
 
-import traceback
 
 @app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         print(f"[INFO] Received file: {audio.filename}")
+        original_ext = audio.filename.split(".")[-1].lower()
+
+        # Save uploaded file to disk
+        with NamedTemporaryFile(delete=False, suffix=f".{original_ext}") as input_tmp:
+            input_tmp.write(await audio.read())
+            input_path = input_tmp.name
+        print(f"[INFO] Saved input file to {input_path}")
+
+        # Convert if WebM
+        if original_ext == "webm":
+            with NamedTemporaryFile(delete=False, suffix=".wav") as output_tmp:
+                output_path = output_tmp.name
+
+            print(f"[INFO] Converting WebM to WAV: {input_path} → {output_path}")
+            ffmpeg.input(input_path).output(output_path, format='wav', ar='16000', ac=1).run(overwrite_output=True)
+        else:
+            output_path = input_path  # Use original
 
         # Read and encode audio
-        audio_bytes = await audio.read()
-        print(f"[INFO] Read {len(audio_bytes)} bytes from file.")
+        with open(output_path, "rb") as f:
+            audio_bytes = f.read()
         audio_base64 = base64.b64encode(audio_bytes).decode()
-        voice_format = audio.filename.split(".")[-1].lower()
-        print(f"[INFO] Detected audio format: {voice_format}")
+        print(f"[INFO] Prepared audio, size = {len(audio_bytes)} bytes")
+
+        # Set voice format for Tencent
+        voice_format = "wav" if original_ext == "webm" else original_ext
 
         # Tencent ASR setup
         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
@@ -73,3 +94,13 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         traceback_str = traceback.format_exc()
         print(f"[ERROR] Traceback:\n{traceback_str}")
         return {"error": str(e)}
+
+    finally:
+        # Clean up temp files
+        try:
+            os.remove(input_path)
+            if original_ext == "webm":
+                os.remove(output_path)
+            print("[INFO] Temp files deleted.")
+        except Exception as cleanup_err:
+            print(f"[WARNING] Failed to delete temp files: {cleanup_err}")
