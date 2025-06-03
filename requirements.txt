@@ -3,4 +3,5 @@ uvicorn
 requests
 python-multipart
 ffmpeg-python>=0.2.0
+tencentcloud-sdk-python
 

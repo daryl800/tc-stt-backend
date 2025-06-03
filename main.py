@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models
 import base64
@@ -8,6 +9,10 @@ import os
 import traceback
 import tempfile
 import ffmpeg
+import shutil
+
+if shutil.which("ffmpeg") is None:
+    raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
 app = FastAPI()
 
@@ -30,6 +35,9 @@ else:
 @app.get("/")
 def read_root():
     return {"message": "Tencent ASR sync version backend is running"}
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8001)
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
