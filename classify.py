@@ -18,6 +18,7 @@ def classify_text(content):
         {
             "Role": "system",
             "Content": "Classify the following memory into one of these categories: [General, Family, Health, Shopping, Reminder]. Return only the category name."
+            "if the memory contains '提醒' or '记得' or '记得提醒' , classify it as 'Reminder'."
         },
         {
             "Role": "user",
