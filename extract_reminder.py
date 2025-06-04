@@ -1,4 +1,5 @@
 
+import datetime
 import json
 from tencentcloud.common import credential
 from tencentcloud.common.profile.http_profile import HttpProfile
@@ -15,15 +16,18 @@ client_profile = ClientProfile(httpProfile=http_profile)
 client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 def extract_datetime_location(text):
+    today = datetime.now().strftime("%Y-%m-%d")
     prompt_system = (
-        "You are an assistant that extracts structured event information from Cantonese text. "
-        "Extract the event description, date and time (ISO 8601 format). "
-        "Follow these rules for date inference:\n"
-        "1. If '下个' (next) is mentioned, use next week's date.\n"
-        "2. If no week is specified, assume **this week** (even if the day has passed today).\n"
+        f"You are an assistant that extracts structured event information from Cantonese text.\n"
+        f"Today is {today}.\n"
+        "Extract the event description, date and time in ISO 8601 format (e.g., '2025-06-11T15:00:00').\n"
+        "Follow these rules:\n"
+        "1. If the user says '下个' (next), it means next week from today.\n"
+        "2. If no week is specified, assume this week even if the day has passed.\n"
         "3. If time is missing, default to 12:00:00.\n"
-        "4. Always output time in **Asia/Hong_Kong** timezone (UTC+8).\n"
-        "Respond ONLY with a JSON object: {'event': str, 'datetime': 'YYYY-MM-DDTHH:MM:SS+08:00', 'location': str}."    
+        "4. Output time in Asia/Hong_Kong timezone (UTC+8).\n"
+        "Return ONLY a raw JSON object with fields: 'event', 'datetime', and 'location'.\n"
+        "Do not include any comments or formatting."
     )
 
     req = models.ChatCompletionsRequest()
