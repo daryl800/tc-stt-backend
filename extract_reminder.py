@@ -17,12 +17,13 @@ client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 def extract_datetime_location(text):
     prompt_system = (
         "You are an assistant that extracts structured event information from Cantonese text. "
-        "Extract the event description, date and time (ISO 8601 format if possible), and location. "
-        "If date/time is vague, infer the closest upcoming date/time. "
-        "If week is not mentioned, assume the next occurrence of the day of this week. "
-        "Respond ONLY with a JSON object with keys: 'event', 'datetime', ' location'. "
-        "Example output:\n"
-        '{\n  "event": "去养和医院复诊",\n  "datetime": "2025-06-11T15:00:00",\n  "location": "香港"\n}'
+        "Extract the event description, date and time (ISO 8601 format). "
+        "Follow these rules for date inference:\n"
+        "1. If '下个' (next) is mentioned, use next week's date.\n"
+        "2. If no week is specified, assume **this week** (even if the day has passed today).\n"
+        "3. If time is missing, default to 12:00:00.\n"
+        "4. Always output time in **Asia/Hong_Kong** timezone (UTC+8).\n"
+        "Respond ONLY with a JSON object: {'event': str, 'datetime': 'YYYY-MM-DDTHH:MM:SS+08:00', 'location': str}."    
     )
 
     req = models.ChatCompletionsRequest()
