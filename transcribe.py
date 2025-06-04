@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models
 from classify import classify_text
-from calendar import create_calendar_event
+from google_calendar import create_calendar_event
 from dateutil import parser as date_parser  # pip install python-dateutil
 import uvicorn
 import base64
