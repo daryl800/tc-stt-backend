@@ -10,6 +10,7 @@ import traceback
 import tempfile
 import ffmpeg
 import shutil
+from classify import classify_text
 
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
@@ -93,7 +94,16 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         resp = client.SentenceRecognition(req)
 
         print(f"[INFO] Transcription result: {resp.Result}")
-        return {"transcription": resp.Result}
+
+        # ✅ Step: Call classify_memory with the transcribed text
+        category = classify_text(resp.Result)
+        print(f"[INFO] Classified category: {category}")
+
+        # ✅ Return both transcription and category
+        return {
+            "transcription": resp.Result,
+            "category": category
+        }
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
