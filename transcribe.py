@@ -38,7 +38,7 @@ def read_root():
     return {"message": "Tencent ASR sync version backend is running"}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8001)
+    uvicorn.run("transcribe:app", host="0.0.0.0", port=8001)
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
