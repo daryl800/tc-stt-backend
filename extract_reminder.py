@@ -19,7 +19,8 @@ def extract_datetime_location(text):
         "You are an assistant that extracts structured event information from Cantonese text. "
         "Extract the event description, date and time (ISO 8601 format if possible), and location. "
         "If date/time is vague, infer the closest upcoming date/time. "
-        "Respond ONLY with a JSON object with keys: 'event', 'datetime', 'location'. "
+        "If week is not mentioned, assume the next occurrence of the day of this week. "
+        "Respond ONLY with a JSON object with keys: 'event', 'datetime', ' location'. "
         "Example output:\n"
         '{\n  "event": "去养和医院复诊",\n  "datetime": "2025-06-11T15:00:00",\n  "location": "香港"\n}'
     )
