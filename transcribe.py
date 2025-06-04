@@ -1,8 +1,11 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models
+from classify import classify_text
+from calendar import create_calendar_event
+from dateutil import parser as date_parser  # pip install python-dateutil
+import uvicorn
 import base64
 import json
 import os
@@ -10,7 +13,8 @@ import traceback
 import tempfile
 import ffmpeg
 import shutil
-from classify import classify_text
+
+
 
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
@@ -93,15 +97,27 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         req.from_json_string(json.dumps(params))
         resp = client.SentenceRecognition(req)
 
-        print(f"[INFO] Transcription result: {resp.Result}")
-
+        transcription = resp.Result
         # ✅ Step: Call classify_memory with the transcribed text
-        category = classify_text(resp.Result)
+        category = classify_text(transcription)
+
+        print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
+
+        if category == "Reminder":
+            # For now, we try to parse date and time heuristically
+            try:
+                # 🤖 You could make this smarter with LLM: "Extract date/time and title from this"
+                extracted_time = date_parser.parse(transcription, fuzzy=True)
+                title = transcription
+                calendar_link = create_calendar_event(title, extracted_time)
+                print(f"[INFO] Reminder added to calendar: {calendar_link}")
+            except Exception as e:
+                print(f"[WARN] Failed to extract datetime: {e}")
 
         # ✅ Return both transcription and category
         return {
-            "transcription": resp.Result,
+            "transcription": transcription,
             "category": category
         }
 
