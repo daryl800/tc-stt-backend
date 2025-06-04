@@ -4,8 +4,8 @@ from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
 import os
 
-TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
-TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
+TENCENT_SECRET_ID = os.getenv("TENCENT_HUNYUAN_SECRET_ID")
+TENCENT_SECRET_KEY = os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
 
 cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
 http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
