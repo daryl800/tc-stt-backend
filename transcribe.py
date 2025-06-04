@@ -5,6 +5,7 @@ from tencentcloud.asr.v20190614 import asr_client, models
 from classify import classify_text
 from google_calendar import create_calendar_event
 from dateutil import parser as date_parser  # pip install python-dateutil
+from extract_reminder import extract_datetime_location
 import uvicorn
 import base64
 import json
@@ -105,15 +106,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Classified category: {category}")
 
         if category == "Reminder":
-            # For now, we try to parse date and time heuristically
-            try:
-                # 🤖 You could make this smarter with LLM: "Extract date/time and title from this"
-                extracted_time = date_parser.parse(transcription, fuzzy=True)
-                title = transcription
-                calendar_link = create_calendar_event(title, extracted_time)
-                print(f"[INFO] Reminder added to calendar: {calendar_link}")
-            except Exception as e:
-                print(f"[WARN] Failed to extract datetime: {e}")
+             extract_datetime_location(transcription)
 
         # ✅ Return both transcription and category
         return {
