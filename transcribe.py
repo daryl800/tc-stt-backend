@@ -106,7 +106,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Classified category: {category}")
 
         if category == "Reminder":
-             extract_datetime_location(transcription)
+            extraction = extract_datetime_location(transcription)
+            print(f"[INFO] reminder: {extraction}")
 
         # ✅ Return both transcription and category
         return {
