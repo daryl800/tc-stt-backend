@@ -1,8 +1,11 @@
 {
   "dependencies": {
-    "@ffmpeg/ffmpeg": "^0.12.15"
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "date-fns": "^4.1.0",
+    "react-calendar": "^6.0.0"
   },
   "devDependencies": {
-    "@types/ffmpeg": "^1.0.7"
+    "@types/ffmpeg": "^1.0.7",
+    "@types/react-calendar": "^3.9.0"
   }
 }

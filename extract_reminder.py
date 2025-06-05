@@ -18,16 +18,21 @@ client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 def extract_datetime_location(text):
     today = datetime.now().strftime("%Y-%m-%d")
     prompt_system = (
-        f"You are an assistant that extracts structured event information from Cantonese text.\n"
-        f"Today is {today}.\n"
-        "Extract the event description, date and time in ISO 8601 format (e.g., '2025-06-11T15:00:00').\n"
-        "Follow these rules:\n"
-        "1. If the user says '下个' (next), it means next week from today.\n"
-        "2. If no week is specified, assume this week even if the day has passed.\n"
-        "3. If time is missing, default to 12:00:00.\n"
-        "4. Output time in Asia/Hong_Kong timezone (UTC+8).\n"
-        "Return ONLY a raw JSON object with fields: 'event', 'datetime', and 'location'.\n"
-        "Do not include any comments or formatting."
+        "你是一個智能助理，從廣東話語句中抽取結構化的事件資料。\n"
+        "請忽略“提醒我”、“記住”等字眼，只專注於提到的實際事件。\n"
+        "請從輸入中提取以下資訊：\n"
+        "1. event：事件的描述（忽略提示用語，抓住主要動作或情況）\n"
+        "2. datetime：事件的時間（ISO 8601 格式），若無明確時間，設為中午12:00。\n"
+        "3. location：如有提及，提取所有地名，格式為字串列表，如 ['佛山', '中山']。\n\n"
+        "例子：\n"
+        "輸入：記住聽朝8點半提醒我，我阿哥會聽日中午之前由佛山嚟到中山。\n"
+        "輸出：\n"
+        "{\n"
+        "  \"event\": \"我阿哥會聽日中午之前由佛山嚟到中山\",\n"
+        "  \"datetime\": \"2025-06-06T08:30:00+08:00\",\n"
+        "  \"location\": [\"佛山\", \"中山\"]\n"
+        "}\n\n"
+        "只回傳純 JSON，不要有多餘文字或 Markdown 格式。"
     )
 
     req = models.ChatCompletionsRequest()
