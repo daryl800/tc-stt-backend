@@ -33,7 +33,7 @@ def extract_event_info(text):
         "輸出：\n"
         "{\n"
         "  \"event\": \"我阿哥會聽日中午之前由佛山嚟到中山\",\n"
-        "  \"datetime\": \"2025-06-06T08:30:00+08:00\",\n"
+        "  \"reminderDatetime\": \"2025-06-06T08:30:00+08:00\",\n"
         "  \"location\": [\"佛山\", \"中山\"],\n"
         "  \"isReminder\": true\n"
         "}\n\n"
