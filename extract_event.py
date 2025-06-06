@@ -24,7 +24,8 @@ def extract_event_info(text):
         "請從輸入中提取以下資訊：\n"
         "1. event：事件的描述（忽略提示用語，抓住主要動作或情況）\n"
         "2. datetime：事件的時間（ISO 8601 格式），若無明確時間，設為中午12:00。\n"
-        "3. location：如有提及，提取所有地名，格式為字串列表，如 ['佛山', '中山']。\n\n"
+        "3. location：如有提及，提取所有地名，格式為字串列表，如 ['佛山', '中山']。\n"
+        "4. isReminder: 如有提及 \"提醒我\", \"記住\", \"记得\", \"记得提醒我\" \n"
         "例子：\n"
         "輸入：記住聽朝8點半提醒我，我阿哥會聽日中午之前由佛山嚟到中山。\n"
         "輸出：\n"
@@ -52,6 +53,7 @@ def extract_event_info(text):
         event = data.get("event", "")
         datetime_iso = data.get("datetime", "")
         locations = data.get("location", [])
+        isReminder = data.get("isReminder", False)
 
         # Compose final output
         return {
@@ -59,7 +61,7 @@ def extract_event_info(text):
             "mainEvent": event,
             "dateTime": datetime_iso,
             "location": ", ".join(locations) if isinstance(locations, list) else locations,
-            "isReminder": True,
+            "isReminder": isReminder,
             "category": classify_text(event),
             "tags": list(set(event.split() + locations))  # crude keywords from event + location
         }
