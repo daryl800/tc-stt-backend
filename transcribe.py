@@ -18,15 +18,6 @@ import shutil
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
@@ -36,12 +27,6 @@ if not TENCENT_SECRET_ID or not TENCENT_SECRET_KEY:
 else:
     print("[INFO] Tencent Cloud credentials loaded.")
 
-@app.get("/")
-def read_root():
-    return {"message": "Tencent ASR sync version backend is running"}
-
-if __name__ == "__main__":
-    uvicorn.run("transcribe:app", host="0.0.0.0", port=8001)
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
@@ -102,9 +87,9 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
 
-        if category == "Reminder":
-            extraction = extract_datetime_location(transcription)
-            print(f"[INFO] reminder: {extraction}")
+        # if category == "Reminder":
+        extraction = extract_datetime_location(transcription)
+        print(f"[INFO] reminder: {extraction}")
 
         # ✅ Return both transcription and category
         return {
