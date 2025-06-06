@@ -86,15 +86,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
 
-        # if category == "Reminder":
         extraction = extract_event_info(transcription)
-        print(f"[INFO] reminder: {extraction}")
+        print(f"[INFO] extracted info: {extraction}")
 
         # ✅ Return both transcription and category
-        return {
-            "transcription": transcription,
-            "category": category
-        }
+        return extraction
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
