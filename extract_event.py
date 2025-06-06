@@ -68,7 +68,7 @@ def extract_event_info(text):
             "reminderDatetime": reminderDatetime_iso,
             "location": ", ".join(locations) if isinstance(locations, list) else locations,
             "isReminder": isReminder,
-            "category": classify_text(event),
+            "category": classify_text(text),
             "tags": list(set(event.split() + locations))  # crude keywords from event + location
         }
 
