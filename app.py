@@ -33,7 +33,7 @@ async def classify(data: TextInput):
 @app.post("/transcribe-cantonese")
 async def transcribe_cantonese(audio: UploadFile = File(...)):
     try:
-        transcription = await transcribe_sync(audio)  # ✅ Don't forget the `await`!
+        transcription = await transcribe_sync(audio)  
         return transcription
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,11 +1,10 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models
 from classify import classify_text
 from dateutil import parser as date_parser  # pip install python-dateutil
-from extract_reminder import extract_datetime_location
-import uvicorn
+from extract_event import extract_event_info
 import base64
 import json
 import os
@@ -88,7 +87,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Classified category: {category}")
 
         # if category == "Reminder":
-        extraction = extract_datetime_location(transcription)
+        extraction = extract_event_info(transcription)
         print(f"[INFO] reminder: {extraction}")
 
         # ✅ Return both transcription and category
