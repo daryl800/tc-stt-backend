@@ -15,7 +15,6 @@ import ffmpeg
 import shutil
 
 
-
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
@@ -61,7 +60,6 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
 
     return wav_bytes
 
-@app.post("/transcribe-cantonese")
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         print(f"[INFO] Received file: {audio.filename}")
