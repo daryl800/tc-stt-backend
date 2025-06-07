@@ -5,7 +5,7 @@ from tencentcloud.common import credential
 from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from classify import classify_text  # assume same directory
 
@@ -19,8 +19,12 @@ client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 
 def extract_event_info(text):
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    weekday_str = datetime.now().strftime("%A")  # e.g., Friday
+    today = datetime.now()
+    tomorrow = today + timedelta(days=1)
+
+    today_str = today.strftime("%Y-%m-%d")
+    weekday_str = today.strftime("%A")  # e.g., Saturday
+    tomorrow_str = tomorrow.strftime("%Y-%m-%d")
 
     prompt_system = f"""
     你是一個智能助理，負責從用戶輸入的廣東話語句中抽取結構化的事件資料。
