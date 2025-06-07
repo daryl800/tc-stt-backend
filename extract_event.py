@@ -25,6 +25,7 @@ def extract_event_info(text):
     prompt_system = f"""
     你是一個智能助理，從廣東話語句中抽取結構化的事件資料。
     今天是：{today_str}（{weekday_str}），請根據這個日期準確计算「聽日」「tomorrow」「next Wednesday」「下星期三」等相對日期。
+    你的任務是從用戶的語句中提取事件的具體內容、時間、地點和是否需要提醒。
 
     請專注於語句中提到的實際事件內容，並判斷這是否屬於用戶的提醒要求。
     請注意，**不要**將語句中的提示詞（如『提醒我』、『記住』、『記落calendar』等）視為事件的一部分。
@@ -35,6 +36,17 @@ def extract_event_info(text):
     2. reminderDatetime：事件的時間（ISO 8601 格式，精確至分鐘，例如 2025-06-06T08:30），若無明確時間，请提供日期并省略时间，即如 2025-06-06。
     3. location：如有提及，提取所有地點，格式為字串列表，例如 ["佛山", "中山"]。
     4. isReminder：布林值（true/false），如句中有『提醒我』『記住』『記落calendar』等才為 true。
+
+    例如，從「我話帮我记落calendar，下个礼拜三晏昼3点钟，我要翻嚟香港去养和医院复诊」中提取出：
+    {{
+        "event": "翻嚟香港去养和医院复诊",  # 事件描述          
+        "reminderDatetime": "2025-06-06T15:00",  # 事件時間（ISO 8601 格式）
+        "location": ["香港", "养和医院"],  # 地點列表
+        "isReminder": true  # 是否需要提醒
+    }}
+    如果語句中沒有明確的事件或時間，請返回空的 event 和 reminderDatetime，location 可以是空列表，isReminder 為 false。
+    如果語句中沒有提及提醒意圖，請將 isReminder 設為 false。
+    
 
     只回傳純 JSON，不要有多餘文字或 Markdown 格式。
     """
