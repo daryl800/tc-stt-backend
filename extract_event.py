@@ -18,77 +18,78 @@ client_profile = ClientProfile(httpProfile=http_profile)
 client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 
-def extract_event_info(text):
-    """
-    Extract structured event information from Cantonese text input.
-    
-    Args:
-        text (str): The input text in Cantonese containing event details.
-    
-    Returns:
-        dict: A dictionary with structured event information.
-    """
-    
-    # Calculate next Monday and Tuesday
+from datetime import datetime, timedelta
+
+def get_date_references():
+    """Generate all date references for the prompt."""
     today = datetime.now()
-    days_ahead = 0 - today.weekday() + 7  # next Monday
-    next_monday = today + timedelta(days=days_ahead)
-    next_monday_str = next_monday.strftime("%Y-%m-%d")
+    weekday = today.weekday()  # Monday=0, Sunday=6
     
-    days_ahead_tuesday = days_ahead + 1  # next Tuesday
-    next_tuesday = today + timedelta(days=days_ahead_tuesday)
-    next_tuesday_str = next_tuesday.strftime("%Y-%m-%d")
+    # Core dates
+    date_refs = {
+        'today': today.strftime("%Y-%m-%d"),
+        'tomorrow': (today + timedelta(days=1)).strftime("%Y-%m-%d"),
+        'day_after_tomorrow': (today + timedelta(days=2)).strftime("%Y-%m-%d"),
+        '3_days_later': (today + timedelta(days=3)).strftime("%Y-%m-%d"),
+        '1_week_later': (today + timedelta(weeks=1)).strftime("%Y-%m-%d"),
+        '2_weeks_later': (today + timedelta(weeks=2)).strftime("%Y-%m-%d"),
+        'next_month': (today.replace(month=today.month % 12 + 1, year=today.year + (today.month // 12))).strftime("%Y-%m-01"),
+    }
+    
+    # Next [Weekday] calculations
+    for day_idx, day in enumerate(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]):
+        days_until = (day_idx - weekday + 7) % 7 or 7
+        date_refs[f'next_{day}'] = (today + timedelta(days=days_until)).strftime("%Y-%m-%d")
+    
+    return date_refs
 
-    tomorrow = today + timedelta(days=1)
-    day_after_tomorrow = today + timedelta(days=2)
+def build_system_prompt(date_refs):
+    return f"""
+    【角色】你是一個精通廣東話的智能助理，專門從用戶輸入中提取結構化事件資料。
 
-    today_str = today.strftime("%Y-%m-%d")
-    weekday_str = today.strftime("%A")
-    tomorrow_str = tomorrow.strftime("%Y-%m-%d")
-    day_after_tomorrow_str = day_after_tomorrow.strftime("%Y-%m-%d")
+    📅 **當前日期參考**（必須嚴格遵守）：
+    - 今日：{date_refs['today']}
+    - 聽日/明天 → {date_refs['tomorrow']}
+    - 後日 → {date_refs['day_after_tomorrow']}
+    - 3日後 → {date_refs['3_days_later']}
+    - 1個星期後 → {date_refs['1_week_later']}
+    - 2個星期後 → {date_refs['2_weeks_later']}
+    - 下個月 → {date_refs['next_month']}（預設為1號）
+    - 下星期一 → {date_refs['next_monday']}
+    - 下星期二 → {date_refs['next_tuesday']}
+    - 下星期三 → {date_refs['next_wednesday']}
+    - ...（其他星期幾類推）
 
+    🎯 **提取規則**：
+    1. `event`：事件核心內容（刪除「提醒我」「記住」等輔助詞）
+       - 錯誤示例：「記住book機票」→ "book機票"
+    2. `reminderDatetime`：
+       - 格式：YYYY-MM-DD（無時間則用日期）或 YYYY-MM-DDTHH:MM（有具體時間）
+       - 必須使用上述日期參考，禁止自行推算
+    3. `location`：只提取明確提及的地點（如「廣州」「公司」）
+    4. `isReminder`：僅當出現「提我」「提醒」「記住」等關鍵詞時為`true`
 
-    prompt_system = f"""
-    你是一個智能助理，負責從用戶輸入的廣東話語句中抽取結構化的事件資料。
+    🚫 **禁止行為**：
+    - 猜測未明確指定的時間（如「晏晝」預設為中午12點）
+    - 修改用戶的事件描述（如簡化「預約醫生」→「睇醫生」）
 
-    📅 今天是：{today_str}（{weekday_str}）。
+    📝 **範例**：
+    | 用戶輸入 | 輸出 |
+    |---------|------|
+    | 「下個星期三3點PM去中環見客」 | {{
+      "event": "去中環見客",
+      "reminderDatetime": "{date_refs['next_wednesday']}T15:00",
+      "location": ["中環"],
+      "isReminder": false
+    }} |
+    | 「兩個星期後提我交電費」 | {{
+      "event": "交電費",
+      "reminderDatetime": "{date_refs['2_weeks_later']}",
+      "location": [],
+      "isReminder": true
+    }} |
 
-    請根據這個日期準確解析以下時間表達：
-    - 「聽日」或「tomorrow」代表 {tomorrow_str}
-    - 「後日」代表 {day_after_tomorrow_str}
-    - 「星期一」表示接下來的「星期一」，即 {next_monday_str}
-    - 「下星期一」也是 {next_monday_str}
-    - ❗ 請避免錯誤地將「星期一」或「下星期一」理解為 {next_tuesday_str}（星期二）
-
-    🧠 你的任務是從輸入中提取以下資訊：
-    1. **event**：事件的具體描述（省略提示語如「提醒我」「記住」等，只保留事件內容本身）
-    2. **reminderDatetime**：事件的時間，使用 ISO 8601 格式：
-        - 若時間明確（例如晏晝3點），請輸出完整格式（例如 "2025-06-09T15:00"）
-        - 若只有日期（例如「下星期一」），請輸出日期（例如 "2025-06-09"）
-    3. **location**：若語句中提及地點，請以字串列表返回（例如 ["香港", "養和醫院"]），若無則為空列表 []
-    4. **isReminder**：若語句中有「記住」「提醒我」「提我一聲」「記落calendar」等提醒語氣，為 true；否則為 false
-
-    📌 注意事項：
-    - 僅當語句中明確表示提醒意圖時，才設置 isReminder 為 true。
-    - 不要把提示語（如「記得提我」、「提醒我」）包含在 event 裡。
-    - 如語句中無明確事件或無法解析時間，請設為：
-        - "event": ""
-        - "reminderDatetime": ""
-        - "location": []
-        - "isReminder": false
-
-    🧾 例子：
-
-    輸入：「我話幫我記落calendar，下個禮拜三晏晝3點鐘，我要翻嚟香港去養和醫院覆診。」
-    輸出：
-    {{
-    "event": "翻嚟香港去養和醫院覆診",
-    "reminderDatetime": "2025-06-11T15:00",
-    "location": ["香港", "養和醫院"],
-    "isReminder": true
-    }}
-
-    請只回傳純 JSON，不需要多餘說明、文字或 Markdown 格式。
+    ⚠️ 只輸出JSON，不要任何解釋或註釋！
     """
 
 
