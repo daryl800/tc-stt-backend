@@ -187,8 +187,16 @@ def extract_event_info(text):
            - 晏晝 → 14:00
            - 朝早 → 09:00
         3. Return empty fields if uncertain
-        """
 
+        [OUTPUT FORMAT]
+        {{
+            "event": "事件描述",
+            "reminderDatetime": "YYYY-MM-DD或YYYY-MM-DDTHH:MM",
+            "location": ["地點"],
+            "isReminder": true/false
+        }}
+        """
+    
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
         req.Model = "hunyuan-standard"
