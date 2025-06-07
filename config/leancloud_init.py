@@ -5,9 +5,9 @@ import leancloud
 import os
 
 def init_leancloud():
-    app_id = os.getenv("LEAN_APP_ID")
-    app_key = os.getenv("LEAN_APP_KEY")
-    master_key = os.getenv("LEAN_MASTER_KEY")  # optional
+    app_id = os.getenv("LEANCLOUD_APP_ID")
+    app_key = os.getenv("LEANCLOUD_APP_KEY")
+    master_key = os.getenv("LEANCLOUD_MASTER_KEY")  # optional
 
     if not app_id or not app_key:
         raise RuntimeError("Missing LeanCloud environment variables.")
