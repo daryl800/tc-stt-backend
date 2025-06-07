@@ -9,16 +9,6 @@ class Memory(Object):
 # Bind to the correct class name in LeanCloud
 Memory = Object.extend('memories')
 
-# Then create and save an instance
-memory = Memory()
-memory.set('title', 'My memory')
-memory.save()
-
-
-
-# Bind to the correct class name in LeanCloud
-Memory = Object.extend('memories')
-
 router = APIRouter()
 
 @router.post("/")
