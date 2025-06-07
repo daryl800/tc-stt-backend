@@ -19,12 +19,34 @@ client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 
 def extract_event_info(text):
+    """
+    Extract structured event information from Cantonese text input.
+    
+    Args:
+        text (str): The input text in Cantonese containing event details.
+    
+    Returns:
+        dict: A dictionary with structured event information.
+    """
+    
+    # Calculate next Monday and Tuesday
     today = datetime.now()
+    days_ahead = 0 - today.weekday() + 7  # next Monday
+    next_monday = today + timedelta(days=days_ahead)
+    next_monday_str = next_monday.strftime("%Y-%m-%d")
+    
+    days_ahead_tuesday = days_ahead + 1  # next Tuesday
+    next_tuesday = today + timedelta(days=days_ahead_tuesday)
+    next_tuesday_str = next_tuesday.strftime("%Y-%m-%d")
+
     tomorrow = today + timedelta(days=1)
+    day_after_tomorrow = today + timedelta(days=2)
 
     today_str = today.strftime("%Y-%m-%d")
-    weekday_str = today.strftime("%A")  # e.g., Saturday
+    weekday_str = today.strftime("%A")
     tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+    day_after_tomorrow_str = day_after_tomorrow.strftime("%Y-%m-%d")
+
 
     prompt_system = f"""
     你是一個智能助理，負責從用戶輸入的廣東話語句中抽取結構化的事件資料。
