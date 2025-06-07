@@ -140,7 +140,6 @@
 #     result = extract_event_info(test_text)
 #     print(json.dumps(result, ensure_ascii=False, indent=2))
 
-
 import json
 import os
 from datetime import datetime
@@ -149,50 +148,55 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
 
-TENCENT_SECRET_ID = os.getenv("TENCENT_HUNYUAN_SECRET_ID")
-TENCENT_SECRET_KEY = os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
-
-cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-client_profile = ClientProfile(httpProfile=http_profile)
-client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
+# Initialize Hunyuan client (singleton pattern)
+def get_hunyuan_client():
+    cred = credential.Credential(
+        os.getenv("TENCENT_HUNYUAN_SECRET_ID"),
+        os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
+    )
+    http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+    client_profile = ClientProfile(httpProfile=http_profile)
+    return hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 def extract_event_info(text):
     """
-    Let the LLM handle date reasoning natively with minimal scaffolding.
-    Returns structured event info from Cantonese text.
+    Final optimized version with:
+    - Proper client initialization
+    - LLM-native date handling
+    - Robust error handling
     """
-    prompt = f"""
-    Current date: {datetime.now().strftime("%Y-%m-%d (%A)")}
-
-    Extract from this Cantonese text:
-    "{text}"
-
-    Return JSON with:
-    - "event": Main action (remove reminder phrases)
-    - "reminderDatetime": ISO 8601 date/time
-    - "location": List of places mentioned
-    - "isReminder": true if contains reminder intent
-
-    Rules:
-    1. Calculate dates RELATIVE TO TODAY natively
-    2. For ambiguous times, default to 14:00 for "晏晝"
-    3. Never guess - return empty fields if uncertain
-    """
-
     try:
-        req = models.ChatCompletionsRequest()
-        req.Messages = [
-            {"Role": "user", "Content": prompt}
-        ]
-        req.Model = "hunyuan-standard"
-        req.Temperature = 0  # For deterministic output
+        # Initialize client (thread-safe)
+        client = get_hunyuan_client()
         
+        prompt = f"""
+        [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+        
+        Extract from Cantonese:
+        "{text}"
+        
+        Return JSON with:
+        - "event": Action description (remove reminder phrases)
+        - "reminderDatetime": ISO 8601 date/time
+        - "location": List of places
+        - "isReminder": true if contains 提醒/記住
+        
+        Rules:
+        1. Calculate dates RELATIVE TO TODAY
+        2. Default times:
+           - 晏晝 → 14:00
+           - 朝早 → 09:00
+        3. Return empty fields if uncertain
+        """
+
+        req = models.ChatCompletionsRequest()
+        req.Messages = [{"Role": "user", "Content": prompt}]
+        req.Model = "hunyuan-standard"
+        req.Temperature = 0
+
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
-        
 
-        
         return {
             "createdAt": datetime.now().isoformat(),
             "text": text,
@@ -200,12 +204,22 @@ def extract_event_info(text):
             "reminderDatetime": data.get("reminderDatetime", ""),
             "location": ", ".join(data.get("location", [])),
             "isReminder": data.get("isReminder", False),
-            "category": "Reminder",  # Or call classify_text()
+            "category": "Reminder",
             "tags": list(set(data.get("location", [])))
         }
 
+    except json.JSONDecodeError:
+        return {
+            "error": "LLM returned invalid JSON",
+            "text": text,
+            "rawResponse": resp.Choices[0].Message.Content if 'resp' in locals() else None
+        }
     except Exception as e:
         return {
             "error": str(e),
             "text": text
         }
+
+# Example test
+if __name__ == "__main__":
+    print(extract_event_info("星期三提醒我睇无线电视新闻"))
