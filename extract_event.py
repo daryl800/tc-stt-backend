@@ -140,9 +140,21 @@
 #     result = extract_event_info(test_text)
 #     print(json.dumps(result, ensure_ascii=False, indent=2))
 
+
 import json
 from datetime import datetime
-from tencentcloud.hunyuan.v20230901 import models  # Assuming you've already set up the client
+from tencentcloud.common import credential
+from tencentcloud.common.profile.http_profile import HttpProfile
+from tencentcloud.common.profile.client_profile import ClientProfile
+from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
+
+TENCENT_SECRET_ID = os.getenv("TENCENT_HUNYUAN_SECRET_ID")
+TENCENT_SECRET_KEY = os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
+
+cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+client_profile = ClientProfile(httpProfile=http_profile)
+client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
 def extract_event_info(text):
     """
@@ -177,6 +189,8 @@ def extract_event_info(text):
         
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
+        
+
         
         return {
             "createdAt": datetime.now().isoformat(),
