@@ -58,75 +58,75 @@ def get_hunyuan_client():
 #         }}
 #         """
 
-    def extract_event_info(text):
+def extract_event_info(text):
+    """
+    Final version with explicit weekday handling rules
+    """
+    try:
+        client = get_hunyuan_client()
+        today = datetime.now()
+        
+        prompt = f"""
+        [Current Date] {today.strftime("%Y-%m-%d (%A)")}
+        [Date Calculation Rules]
+        1. Single weekday ("星期三") → Nearest future occurrence
+        - Today is {today.strftime("%A")}: 
+            "星期三" = {_get_next_weekday(today, 2).strftime("%Y-%m-%d")}
+        2. "下星期三" → Same day next week
+        - "下星期三" = {(today + timedelta(days=(2 - today.weekday() + 7))).strftime("%Y-%m-%d")}
+        3. "下下星期三" → Two weeks ahead
+        - Example: {(today + timedelta(days=(2 - today.weekday() + 14))).strftime("%Y-%m-%d")}
+
+        [User Input]
+        "{text}"
+
+        [Output Requirements]
+        {{
+            "event": "cleaned description",
+            "reminderDatetime": "ISO8601 format (09:00 default if no time)",
+            "location": ["place"],
+            "isReminder": boolean
+        }}
         """
-        Final version with explicit weekday handling rules
-        """
-        try:
-            client = get_hunyuan_client()
-            today = datetime.now()
-            
-            prompt = f"""
-            [Current Date] {today.strftime("%Y-%m-%d (%A)")}
-            [Date Calculation Rules]
-            1. Single weekday ("星期三") → Nearest future occurrence
-            - Today is {today.strftime("%A")}: 
-                "星期三" = {_get_next_weekday(today, 2).strftime("%Y-%m-%d")}
-            2. "下星期三" → Same day next week
-            - "下星期三" = {(today + timedelta(days=(2 - today.weekday() + 7))).strftime("%Y-%m-%d")}
-            3. "下下星期三" → Two weeks ahead
-            - Example: {(today + timedelta(days=(2 - today.weekday() + 14))).strftime("%Y-%m-%d")}
 
-            [User Input]
-            "{text}"
+        # ... rest of your API call code ...
 
-            [Output Requirements]
-            {{
-                "event": "cleaned description",
-                "reminderDatetime": "ISO8601 format (09:00 default if no time)",
-                "location": ["place"],
-                "isReminder": boolean
-            }}
-            """
+        def _get_next_weekday(from_date, weekday):
+            """Helper: Get next specific weekday (0=Monday)"""
+            days_ahead = (weekday - from_date.weekday() + 7) % 7
+            return from_date + timedelta(days=days_ahead)
+        
+            req = models.ChatCompletionsRequest()
+            req.Messages = [{"Role": "user", "Content": prompt}]
+            req.Model = "hunyuan-pro"  # Use the turbo model for better performance
+            req.Temperature = 0
 
-            # ... rest of your API call code ...
+            resp = client.ChatCompletions(req)
+            data = json.loads(resp.Choices[0].Message.Content.strip())
 
-            def _get_next_weekday(from_date, weekday):
-                """Helper: Get next specific weekday (0=Monday)"""
-                days_ahead = (weekday - from_date.weekday() + 7) % 7
-                return from_date + timedelta(days=days_ahead)
-            
-                req = models.ChatCompletionsRequest()
-                req.Messages = [{"Role": "user", "Content": prompt}]
-                req.Model = "hunyuan-pro"  # Use the turbo model for better performance
-                req.Temperature = 0
-
-                resp = client.ChatCompletions(req)
-                data = json.loads(resp.Choices[0].Message.Content.strip())
-
-                return {
-                    "createdAt": datetime.now().isoformat(),
-                    "text": text,
-                    "mainEvent": data.get("event", ""),
-                    "reminderDatetime": data.get("reminderDatetime", ""),
-                    "location": ", ".join(data.get("location", [])),
-                    "isReminder": data.get("isReminder", False),
-                    "category": "Reminder",
-                    "tags": list(set(data.get("location", [])))
-                }
-
-        except json.JSONDecodeError:
             return {
-                "error": "LLM returned invalid JSON",
+                "createdAt": datetime.now().isoformat(),
                 "text": text,
-                "rawResponse": resp.Choices[0].Message.Content if 'resp' in locals() else None
-            }
-        except Exception as e:
-            return {
-                "error": str(e),
-                "text": text
+                "mainEvent": data.get("event", ""),
+                "reminderDatetime": data.get("reminderDatetime", ""),
+                "location": ", ".join(data.get("location", [])),
+                "isReminder": data.get("isReminder", False),
+                "category": "Reminder",
+                "tags": list(set(data.get("location", [])))
             }
 
-    # Example test
-    if __name__ == "__main__":
-        print(extract_event_info("星期三提醒我睇无线电视新闻"))
+    except json.JSONDecodeError:
+        return {
+            "error": "LLM returned invalid JSON",
+            "text": text,
+            "rawResponse": resp.Choices[0].Message.Content if 'resp' in locals() else None
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "text": text
+        }
+
+# Example test
+if __name__ == "__main__":
+    print(extract_event_info("星期三提醒我睇无线电视新闻"))
