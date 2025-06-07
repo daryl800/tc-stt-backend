@@ -45,12 +45,12 @@ def extract_event_info(text):
 
     例如，從「我話帮我记落calendar，下个礼拜三晏昼3点钟，我要翻嚟香港去养和医院复诊」中應提取為：
 
-    {
+    {{
     "event": "翻嚟香港去养和医院复诊",
     "reminderDatetime": "2025-06-11T15:00",
     "location": ["香港", "养和医院"],
     "isReminder": true
-    }
+    }}
 
     只回傳純 JSON，不要有多餘文字或 Markdown 格式。
     """
