@@ -142,6 +142,7 @@
 
 
 import json
+import os
 from datetime import datetime
 from tencentcloud.common import credential
 from tencentcloud.common.profile.http_profile import HttpProfile
