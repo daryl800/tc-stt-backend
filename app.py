@@ -3,6 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from classify import classify_text
 from transcribe import transcribe_sync
+from config.leancloud_init import init_leancloud
+# Import your models and routes
+from models.memory import Memory
+from routes.memory_routes import router as memory_router
+
+# ✅ Initialize LeanCloud before any model import
+init_leancloud()
+
+from routes.memory_routes import router as memory_router
 
 app = FastAPI()
 
@@ -14,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include your memory routes
+app.include_router(memory_router, prefix="/memory")
 
 class TextInput(BaseModel):
     text: str

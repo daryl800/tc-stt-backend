@@ -1,10 +1,3 @@
-from fastapi import File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from tencentcloud.common import credential
-from tencentcloud.asr.v20190614 import asr_client, models
-from classify import classify_text
-from dateutil import parser as date_parser  # pip install python-dateutil
-from extract_event import extract_event_info
 import base64
 import json
 import os
@@ -12,6 +5,15 @@ import traceback
 import tempfile
 import ffmpeg
 import shutil
+from fastapi import File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from tencentcloud.common import credential
+from tencentcloud.asr.v20190614 import asr_client, models
+from classify import classify_text
+from dateutil import parser as date_parser  # pip install python-dateutil
+from extract_event import extract_event_info
+from routes.memory_routes import save_memory  # assuming you placed the function here
+
 
 
 if shutil.which("ffmpeg") is None:
@@ -89,6 +91,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         extraction = extract_event_info(transcription)
         print(f"[INFO] extracted info: {extraction}")
 
+        # ✅ Save the memory with transcription and category
+        save_memory(extraction)
         # ✅ Return both transcription and category
         return extraction
 
