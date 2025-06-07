@@ -53,6 +53,7 @@ def extract_event_info(text):
     "location": ["香港", "养和医院"],
     "isReminder": true
     }
+    """
 
 
 
