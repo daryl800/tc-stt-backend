@@ -56,7 +56,7 @@ client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
 
 def tencent_tts(text):
     # Request setup (CORRECT: Using TextToVoiceRequest)
-    req = models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
+    req = tts_models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
     params = {
         "Text": text,
         "SessionId": "test-123",
@@ -105,7 +105,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Tencent ASR
         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
-        req = models.SentenceRecognitionRequest()
+        req = asr_models.SentenceRecognitionRequest()
 
         params = {
             "ProjectId": 0,
