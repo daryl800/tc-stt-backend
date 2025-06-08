@@ -91,16 +91,18 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         voice_format = audio.filename.split(".")[-1].lower()
         print(f"[INFO] Detected audio format: {voice_format}")
 
-        # Convert webm to wav if needed
+        # Convert to WAV if needed
         if voice_format == "webm":
             print("[INFO] Converting webm to wav...")
             raw_wav = convert_webm_to_wav(audio_bytes)
             voice_format = "wav"
+        else:
+            raw_wav = audio_bytes  # already WAV
 
-        # Encode audio to base64
+        # Encode for Tencent ASR
         audio_base64 = base64.b64encode(raw_wav).decode()
 
-        # Tencent ASR
+        # Tencent ASR request
         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
         req = asr_models.SentenceRecognitionRequest()
@@ -108,7 +110,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-PY",
+            "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" if Cantonese
             "SourceType": 1,
             "VoiceFormat": voice_format,
             "UsrAudioKey": "test-key",
@@ -122,24 +124,21 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         transcription = resp.Result
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
-        # ✅ Step: Call classify_memory with the transcribed text
         category = classify_text(transcription)
         extraction = extract_event_info(transcription)
 
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
-        print(f"[INFO] extracted info: {extraction}")
-        print(f"[INFO] raw_wav: {raw_wav}")
+        print(f"[INFO] Extracted info: {extraction}")
 
-        extraction["raw_wav"] = raw_wav
+        extraction["raw_wav"] = raw_wav  # used later for LeanCloud file upload
         extraction["text"] = transcription
-        # ✅ Save the memory with transcription and category
-        save_memory(extraction)
+        save_memory(extraction)  # This should handle saving audio too
         print("[INFO] Memory saved successfully.")
-        extraction["tts_wav"] = tts_wav
 
-        # ✅ Return both transcription and category
+        extraction["tts_wav"] = tts_wav
         return extraction
+
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
