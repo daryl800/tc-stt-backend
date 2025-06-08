@@ -61,7 +61,7 @@ def tencent_tts(text):
         "Text": text,
         "SessionId": "test-123",
         "ModelType": 1,
-        "VoiceType": 101019,  # Cantonese Female (should be correct)
+        "VoiceType": 101019,  # Cantonese Female 
         "Codec": "wav",
         "Volume": 5,
         "Speed": 0,
@@ -84,7 +84,6 @@ def tencent_tts(text):
             print("Solution: Purchase ")
 
 
-
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         print(f"[INFO] Received file: {audio.filename}")
@@ -95,11 +94,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Convert webm to wav if needed
         if voice_format == "webm":
             print("[INFO] Converting webm to wav...")
-            audio_bytes = convert_webm_to_wav(audio_bytes)
+            raw_wav = convert_webm_to_wav(audio_bytes)
             voice_format = "wav"
 
         # Encode audio to base64
-        audio_base64 = base64.b64encode(audio_bytes).decode()
+        audio_base64 = base64.b64encode(raw_wav).decode()
 
         # Tencent ASR
         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
@@ -131,6 +130,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Classified category: {category}")
         print(f"[INFO] extracted info: {extraction}")
 
+        extraction["raw_wav"] = raw_wav
+        extraction["text"] = transcription
         # ✅ Save the memory with transcription and category
         save_memory(extraction)
         print("[INFO] Memory saved successfully.")
