@@ -7,13 +7,15 @@ import ffmpeg
 import shutil
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from tencentcloud.common import credential
-from tencentcloud.asr.v20190614 import asr_client, models
+
 from classify import classify_text
 from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_event_info
 from routes.memory_routes import save_memory  # assuming you placed the function here
-
+from tencentcloud.common import credential
+from tencentcloud.tts.v20190823 import asr_client, tts_client, models
+from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+import base64
 
 
 if shutil.which("ffmpeg") is None:
@@ -45,6 +47,42 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
         os.remove(wav_path)
 
     return wav_bytes
+
+# Setup credentials
+cred = credential.Credential(TECENT_SECRET_ID, TECENT_SECRET_KEY)
+client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
+
+def tencent_tts(text):
+    # Request setup (CORRECT: Using TextToVoiceRequest)
+    req = models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
+    params = {
+        "Text": text,
+        "SessionId": "test-123",
+        "ModelType": 1,
+        "VoiceType": 101019,  # Cantonese Female (should be correct)
+        "Codec": "wav",
+        "Volume": 5,
+        "Speed": 0,
+        "ProjectId": 0,
+        "SampleRate": 16000
+    }
+    req.from_json_string(str(params).replace("'", '"'))  # Convert dict to JSON string
+
+    # Request and save
+    try:
+        resp = client.TextToVoice(req)
+        audio_bytes = base64.b64decode(resp.Audio)
+        
+        print(f"Audio length: {resp.AudioDuration} seconds")
+        print(f"File size: {len(audio_bytes)/1024:.2f} KB")
+        return audio_bytes
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        if "PkgExhausted" in str(e):
+            print("Solution: Purchase ")
+
+
 
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:

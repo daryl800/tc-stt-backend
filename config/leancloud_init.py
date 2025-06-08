@@ -1,9 +1,6 @@
 import leancloud
 import os
 
-import leancloud
-import os
-
 def init_leancloud():
     app_id = os.getenv("LEANCLOUD_APP_ID")
     app_key = os.getenv("LEANCLOUD_APP_KEY")
