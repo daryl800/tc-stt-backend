@@ -127,7 +127,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
 
-        tts_wav = base64.b64encode(tencent_tts({transcription})).decode()
+        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         extraction = extract_event_info(transcription)
         extraction["tts_wav"] = tts_wav
