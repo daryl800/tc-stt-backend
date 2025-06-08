@@ -75,7 +75,6 @@ def tencent_tts(text):
         resp = client.TextToVoice(req)
         audio_bytes = base64.b64decode(resp.Audio)
         
-        print(f"Audio length: {resp.AudioDuration} seconds")
         print(f"File size: {len(audio_bytes)/1024:.2f} KB")
         return audio_bytes
 
@@ -128,13 +127,15 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
 
+        tts_wav = base64.b64encode(tencent_tts({transcription})).decode()
+
         extraction = extract_event_info(transcription)
+        extraction["tts_wav"] = tts_wav
         print(f"[INFO] extracted info: {extraction}")
 
         # ✅ Save the memory with transcription and category
         save_memory(extraction)
-
-        extraction.tts_audio = base64.b64encode(tencent_tts(transcription)).decode()
+        print("[INFO] Memory saved successfully.")
 
         # ✅ Return both transcription and category
         return extraction
