@@ -37,17 +37,34 @@ def extract_event_info(text):
         - "event": Action description (remove reminder phrases)
         - "reminderDatetime": ISO 8601 date/time
         - "location": List of places
-        - "isReminder": true if contains 提醒/記住/记得
+        - "isReminder": true if contains 提我/提醒我/, else false
         
         Time Handling Rules:
-        1. If only date mentioned → Add default time 09:00
+        1. Cantonese weekdays:
+        - 「星期三」 means this week's Wednesday.
+        - 「下星期三」 means next week's Wednesday (7 days after this week's Wednesday).
+        - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
+
+        2. If only date mentioned → Add default time 09:00
         Example: "星期三開會" → "2025-06-11T09:00"
-        2. Time period defaults:
-        - 朝早/上午 → 09:00
-        - 晏晝/下午 → 14:00
-        - 夜晚 → 20:00
-        3. Exact times keep as-is
-        4. Uncertain times → Return empty string
+
+        3. Time period defaults:
+        - 朝早 / 上午 → 09:00
+        - 晏晝 / 下午 → 14:00
+        - 夜晚 / 晚上 → 20:00
+
+        4. Exact times (e.g., “下午三點”) should be preserved as-is.
+
+        5. If time is vague or uncertain → Use empty string for "reminderDatetime"
+
+        6. If the sentence includes “提醒我” or “提我”:
+        → Interpret the date as the next upcoming matching date from today.
+        Example:
+        - If today is Monday, and text says “提醒我星期三”，then return this week's Wednesday.
+        - If today is Friday and text says “提醒我星期三”，then return next week's Wednesday (as this week’s Wednesday is already past).
+
+        → Always calculate the next valid date from today to avoid reminders set in the past.
+
 
         [OUTPUT FORMAT]
         {{
