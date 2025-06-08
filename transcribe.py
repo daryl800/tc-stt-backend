@@ -13,7 +13,8 @@ from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_event_info
 from routes.memory_routes import save_memory  # assuming you placed the function here
 from tencentcloud.common import credential
-from tencentcloud.tts.v20190823 import asr_client, tts_client, models
+from tencentcloud.asr.v20190614 import asr_client, models as asr_models
+from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 import base64
 
@@ -21,9 +22,10 @@ import base64
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
-
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
+TENCENT_HUNYUAN_SECRET_ID = os.getenv("TENCENT_HUNYUAN_SECRET_ID")
+TENCENT_HUNYUAN_SECRET_KEY = os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
 
 if not TENCENT_SECRET_ID or not TENCENT_SECRET_KEY:
     print("[ERROR] Tencent Cloud credentials are not set.")
@@ -49,7 +51,7 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     return wav_bytes
 
 # Setup credentials
-cred = credential.Credential(TECENT_SECRET_ID, TECENT_SECRET_KEY)
+cred = credential.Credential(TENCENT_HUNYUAN_SECRET_ID, TENCENT_HUNYUAN_SECRET_KEY)
 client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
 
 def tencent_tts(text):
@@ -131,6 +133,9 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # ✅ Save the memory with transcription and category
         save_memory(extraction)
+
+        extraction.tts_audio = base64.b64encode(tencent_tts(transcription)).decode()
+
         # ✅ Return both transcription and category
         return extraction
 
