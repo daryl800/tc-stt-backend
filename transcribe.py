@@ -129,7 +129,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
-        print(f"[INFO] extracted info: {extraction}")
+        # print(f"[INFO] extracted info: {extraction}")
 
         # ✅ Save the memory with transcription and category
         save_memory(extraction)
