@@ -15,7 +15,7 @@ router = APIRouter()
 
 app_id = os.getenv("LEANCLOUD_APP_ID")
 app_key = os.getenv("LEANCLOUD_APP_KEY")    
-app_endPoint = f"https://{LEANCLOUD_APP_ID.lower()}.api.lncldglobal.com/1.1/files"
+app_endPoint = f"https://{app_id.lower()}.api.lncldglobal.com/1.1/files"
 
 def upload_audio_to_leancloud(filepath: str) -> str:
     filename = os.path.basename(filepath)
@@ -39,7 +39,7 @@ def save_memory(data: dict):
     memory = Memory()
     
     # Upload .wav audio file and get its URL
-    wav_path = data.get("wavPath")  # passed in from API or internal code
+    wav_path = data.get("raw_wav")  # passed in from API or internal code
     if wav_path:
         audio_url = upload_audio_to_leancloud(wav_path)
         memory.set("audioUrl", audio_url)  # 👈 store in DB
