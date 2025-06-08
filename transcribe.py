@@ -121,21 +121,20 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         resp = client.SentenceRecognition(req)
 
         transcription = resp.Result
+        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+
         # ✅ Step: Call classify_memory with the transcribed text
         category = classify_text(transcription)
+        extraction = extract_event_info(transcription)
 
         print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Classified category: {category}")
-
-        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
-
-        extraction = extract_event_info(transcription)
-        extraction["tts_wav"] = tts_wav
         print(f"[INFO] extracted info: {extraction}")
 
         # ✅ Save the memory with transcription and category
         save_memory(extraction)
         print("[INFO] Memory saved successfully.")
+        extraction["tts_wav"] = tts_wav
 
         # ✅ Return both transcription and category
         return extraction
