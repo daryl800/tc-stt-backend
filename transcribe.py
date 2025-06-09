@@ -103,7 +103,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         audio_base64 = base64.b64encode(raw_wav).decode()
 
         # Tencent ASR request
-        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+        cred = credential.Credential(TENCENT_HUNYUAN_SECRET_ID, TENCENT_HUNYUAN_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
         req = asr_models.SentenceRecognitionRequest()
 
