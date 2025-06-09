@@ -32,10 +32,14 @@ def extract_event_info(text):
         "{text}"
         
         Return JSON with:
-        - "event": Action description (remove reminder phrases)
-        - "reminderDatetime": ISO 8601 date/time
-        - "location": List of places
-        - "isReminder": true if contains 提我/提醒我/, else false
+        - "event": Short action/plan summary (omit reminder words)
+        - "reminderDatetime": ISO 8601 format or empty string if unclear
+        - "location": List of places mentioned (e.g., 香港, 瑞典)
+        - "isReminder": true if it includes 提我/提醒我
+        - "tags": List of keywords including:
+        - Locations (e.g., 香港)
+        - People/entities (e.g., 我個仔, 屋企人)
+        - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
         
         Time Handling Rules:
         1. Cantonese weekdays:
@@ -63,13 +67,18 @@ def extract_event_info(text):
 
         → Always calculate the next valid date from today to avoid reminders set in the past.
 
+        Tagging rules:
+        1. Tags should be useful for searching and grouping memories.
+        2. Tags should be short (1–5 words) and meaningful.
+        3. Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的".
 
         [OUTPUT FORMAT]
         {{
-            "event": "事件描述",
-            "reminderDatetime": "YYYY-MM-DD或YYYY-MM-DDTHH:MM",
-            "location": ["地點"],
-            "isReminder": true/false
+        "event": "事件描述",
+        "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
+        "location": ["地點"],
+        "isReminder": true/false,
+        "tags": ["香港", "我個仔", "出年", "旅行"]
         }}
         """
     
@@ -80,7 +89,6 @@ def extract_event_info(text):
 
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
-
 
         return {
             "createdAt": datetime.now().isoformat(),
