@@ -137,7 +137,13 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print("[INFO] Memory saved successfully.")
 
         extraction["tts_wav"] = tts_wav
+        
+        # Clean up non-serializable field
+        extraction.pop("raw_wav", None)
+
+        # Now return it safely
         return extraction
+
 
 
     except Exception as e:

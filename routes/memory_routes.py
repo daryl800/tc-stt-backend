@@ -31,7 +31,7 @@ def upload_audio_to_leancloud(audio_bytes: bytes, filename: str = None) -> str:
     }
 
     response = requests.post(
-        app_endPoint + "/{filename}",
+        f"{app_endPoint}/{filename}",  # ✅ proper f-string
         headers=headers,
         data=audio_bytes  # ✅ send raw bytes
     )
@@ -44,9 +44,9 @@ def save_memory(data: dict):
     memory = Memory()
     
     # Upload .wav audio file and get its URL
-    wav_path = data.get("raw_wav")  # passed in from API or internal code
-    if wav_path:
-        audio_url = upload_audio_to_leancloud(wav_path)
+    raw_wave_byte = data.get("raw_wav")  # passed in from API or internal code
+    if raw_wave_byte:
+        audio_url = upload_audio_to_leancloud(raw_wave_byte)
         memory.set("audioUrl", audio_url)  # 👈 store in DB
     
     memory.set("text", data.get("text", ""))
