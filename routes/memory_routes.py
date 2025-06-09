@@ -55,8 +55,9 @@ def save_memory(data: dict):
     memory.set("location", ", ".join(data.get("location", [])))
     memory.set("isReminder", data.get("isReminder", False))
     memory.set("category", "Reminder")
-    memory.set("tags", list(set(data.get("location", []))))
+    memory.set("tags", data.get("tags", []))
 
+    print(f"[INFO from extracting] tags: {memory.get('tags', [])}")
     memory.save()
     print(f"[INFO] Memory saved with ID: {memory.id} at {datetime.now().isoformat()}")
 
