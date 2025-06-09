@@ -121,6 +121,15 @@ def extract_event_info(text):
         - Tags should help users search or group their memories.
         - Keep tags short (1–5 words), clear, and meaningful.
         - Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的"
+        
+        [OUTPUT FORMAT]
+        {{
+        "event": "事件描述",
+        "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
+        "location": ["地點"],
+        "isReminder": true/false,
+        "tags": ["香港", "我個仔", "出年", "旅行"]
+        }}
         """
 
         req = models.ChatCompletionsRequest()
