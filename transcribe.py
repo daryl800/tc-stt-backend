@@ -3,7 +3,7 @@ import json
 import os
 import traceback
 import tempfile
-import ffmpeg
+import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from classify import classify_text
 from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_event_info
-from routes.memory_routes import save_memory  # assuming you placed the function here
+from utils.save_memory import save_to_leancloud  # assuming you placed the function here
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
@@ -130,7 +130,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         extraction["raw_wav"] = raw_wav  # used later for LeanCloud file upload
         extraction["text"] = transcription
-        save_memory(extraction)  # This should handle saving audio too
+        save_to_leancloud(extraction)  # This should handle saving audio too
         print("[INFO] Memory saved successfully.")
 
         extraction["tts_wav"] = tts_wav

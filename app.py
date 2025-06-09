@@ -1,21 +1,18 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from classify import classify_text
-from transcribe import transcribe_sync
 from config.leancloud_init import init_leancloud
-# Import your models and routes
-from models.memory import Memory
-from routes.memory_routes import router as memory_router
 
-# ✅ Initialize LeanCloud before any model import
+# ✅ Init LeanCloud first
 init_leancloud()
 
+# ✅ Import routers
 from routes.memory_routes import router as memory_router
+from routes.classify_routes import router as classify_router
+from routes.transcribe_routes import router as transcribe_router
 
 app = FastAPI()
 
-# ✅ CORS config (for local frontend like Vite or React)
+# ✅ CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -24,28 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include your memory routes
+# ✅ Route registration
 app.include_router(memory_router, prefix="/memory")
+app.include_router(classify_router, prefix="/classify")
+app.include_router(transcribe_router, prefix="/transcribe")
 
-class TextInput(BaseModel):
-    text: str
-
+# ✅ Health check
 @app.get("/")
 def read_root():
     return {"message": "Health check ... AI-Buddy backend is running"}
-
-@app.post("/classify")
-async def classify(data: TextInput):
-    try:
-        category = classify_text(data.text)
-        return {"category": category}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/transcribe-cantonese")
-async def transcribe_cantonese(audio: UploadFile = File(...)):
-    try:
-        transcription = await transcribe_sync(audio)  
-        return transcription
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))

@@ -1,64 +1,25 @@
-from fastapi import APIRouter
-from models.memory import Memory
-from datetime import datetime
-from leancloud import Object
-import requests
-import os
-from config.constants import LEANCLOUD_APP_ID, LEANCLOUD_APP_KEY
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from models.memory_item import MemoryItem
+from utils.save_memory import save_to_leancloud
 
-class Memory(Object):
-    pass
-
-# Bind to the correct class name in LeanCloud
-Memory = Object.extend('memories')
+import json
 
 router = APIRouter()
 
-app_id = LEANCLOUD_APP_ID
-app_key = LEANCLOUD_APP_KEY   
-app_endPoint = f"https://{app_id.lower()}.api.lncldglobal.com/1.1/files"
-
-import uuid
-
-def upload_audio_to_leancloud(audio_bytes: bytes, filename: str = None) -> str:
-    if not filename:
-        filename = f"memory_{uuid.uuid4().hex}.wav"
-
-    headers = {
-        "X-LC-Id": app_id,
-        "X-LC-Key": app_key,
-        "Content-Type": "audio/wav"
-    }
-
-    response = requests.post(
-        f"{app_endPoint}/{filename}",  # ✅ proper f-string
-        headers=headers,
-        data=audio_bytes  # ✅ send raw bytes
-    )
-
-    response.raise_for_status()
-    return response.json()["url"]
-
 @router.post("/")
-def save_memory(data: dict):
-    memory = Memory()
-    
-    # Upload .wav audio file and get its URL
-    raw_wave_byte = data.get("raw_wav")  # passed in from API or internal code
-    if raw_wave_byte:
-        audio_url = upload_audio_to_leancloud(raw_wave_byte)
-        memory.set("audioUrl", audio_url)  # 👈 store in DB
-    
-    memory.set("text", data.get("text", ""))
-    memory.set("mainEvent", data.get("event", ""))
-    memory.set("reminderDatetime", data.get("reminderDatetime", ""))
-    memory.set("location", ", ".join(data.get("location", [])))
-    memory.set("isReminder", data.get("isReminder", False))
-    memory.set("category", "Reminder")
-    memory.set("tags", data.get("tags", []))
+async def save_memory_endpoint(memory_json: str = Form(...), audio: UploadFile = File(None)):
+    try:
+        # Parse memory info
+        memory_dict = json.loads(memory_json)
+        memory_item = MemoryItem(**memory_dict)
 
-    print(f"[INFO from extracting] tags: {memory.get('tags', [])}")
-    memory.save()
-    print(f"[INFO] Memory saved with ID: {memory.id} at {datetime.now().isoformat()}")
+        # Read audio bytes if present
+        audio_bytes = await audio.read() if audio else None
 
-    return {"status": "ok"}
+        # Save to LeanCloud
+        memory_id = save_to_leancloud(memory_item, audio_bytes)
+
+        return {"status": "ok", "id": memory_id}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
