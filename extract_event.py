@@ -98,7 +98,7 @@ def extract_event_info(text):
             text=text,
             mainEvent=data.get("event", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
-            location=data.get("location", []),  # This will now be a list
+            location=list(set(data.get("location", []))),   # This will now be a list
             isReminder=data.get("isReminder", False),
             category="Reminder",
             tags=list(set(data.get("tags", [])))  # Ensure tags are unique
