@@ -80,6 +80,8 @@ def extract_event_info(text):
 
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
+    
+        print(f"[INFO from extracting] tags: {list(set(data.get("location", [])))}")
 
         return {
             "createdAt": datetime.now().isoformat(),
