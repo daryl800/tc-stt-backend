@@ -84,46 +84,45 @@ def extract_event_info(text):
         # """
 
         prompt = f"""
-            [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+        [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
 
-            Extract structured information from the following Cantonese sentence:
-            "{text}"
+        Extract structured information from the following Cantonese sentence:
+        "{text}"
 
-            Please output ONLY a JSON object with the following fields:
-            {
-            "event": "Short description of the action or plan (omit words like 記得, 提我, 提醒)",
-            "reminderDatetime": "Strict ISO 8601 format (e.g., '2025-06-12T14:00') or empty string if unclear",
-            "location": ["A list of places mentioned, such as 香港, 旺角"],
-            "isReminder": true if sentence contains 提我, 提提我, or 提醒我; false otherwise,
-            "tags": ["A list of meaningful keywords, such as 家人, 暑假, 醫生 (exclude filler words like 我, 啦, 的)"]
-            }
+        Please output ONLY a JSON object with the following fields:
+        {
+        "event": "Short description of the action or plan (omit words like 記得, 提我, 提醒)",
+        "reminderDatetime": "Strict ISO 8601 format (e.g., '2025-06-12T14:00') or empty string if unclear",
+        "location": ["A list of places mentioned, such as 香港, 旺角"],
+        "isReminder": true if sentence contains 提我, 提提我, or 提醒我; false otherwise,
+        "tags": ["A list of meaningful keywords, such as 家人, 暑假, 醫生 (exclude filler words like 我, 啦, 的)"]
+        }
 
-            Time Handling Rules:
-            1. Weekday Interpretation:
-            - 「星期三」 means this week's Wednesday.
-            - 「下星期三」 means next week's Wednesday.
-            - 「出年」、「下個月」、「下星期」 refer to the next full period.
+        Time Handling Rules:
+        1. Weekday Interpretation:
+        - 「星期三」 means this week's Wednesday.
+        - 「下星期三」 means next week's Wednesday.
+        - 「出年」、「下個月」、「下星期」 refer to the next full period.
 
-            2. If only a date is mentioned → default time is 09:00
-            3. Time period defaults:
-            - 朝早 / 上午 → 09:00
-            - 晏晝 / 下午 → 14:00
-            - 夜晚 / 晚上 → 20:00
+        2. If only a date is mentioned → default time is 09:00
+        3. Time period defaults:
+        - 朝早 / 上午 → 09:00
+        - 晏晝 / 下午 → 14:00
+        - 夜晚 / 晚上 → 20:00
 
-            4. If time is vague, missing, or ambiguous → use empty string for "reminderDatetime"
+        4. If time is vague, missing, or ambiguous → use empty string for "reminderDatetime"
 
-            5. If the sentence includes “提醒我” or “提我”:
-            - Calculate the next upcoming matching date from today.
-            - Example: if today is Monday and user says "提醒我星期三", return this week's Wednesday.
-            - If it's Friday and "星期三" is mentioned, return next week's Wednesday.
+        5. If the sentence includes “提醒我” or “提我”:
+        - Calculate the next upcoming matching date from today.
+        - Example: if today is Monday and user says "提醒我星期三", return this week's Wednesday.
+        - If it's Friday and "星期三" is mentioned, return next week's Wednesday.
 
-            Tagging rules:
-            - Tags should help users search or group their memories.
-            - Keep tags short (1–5 words), clear, and meaningful.
-            - Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的"
-            """
+        Tagging rules:
+        - Tags should help users search or group their memories.
+        - Keep tags short (1–5 words), clear, and meaningful.
+        - Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的"
+        """
 
-    
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
         req.Model = "hunyuan-standard"  # Use the turbo model for better performance
