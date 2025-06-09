@@ -4,6 +4,7 @@ from datetime import datetime
 from leancloud import Object
 import requests
 import os
+from config.constants import LEANCLOUD_APP_ID, LEANCLOUD_APP_KEY
 
 class Memory(Object):
     pass
@@ -13,10 +14,9 @@ Memory = Object.extend('memories')
 
 router = APIRouter()
 
-app_id = os.getenv("LEANCLOUD_APP_ID")
-app_key = os.getenv("LEANCLOUD_APP_KEY")    
+app_id = LEANCLOUD_APP_ID
+app_key = LEANCLOUD_APP_KEY   
 app_endPoint = f"https://{app_id.lower()}.api.lncldglobal.com/1.1/files"
-
 
 import uuid
 

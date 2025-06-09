@@ -17,16 +17,21 @@ from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 import base64
-
+from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
-TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID_CN")
-TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY_CN")
-
 # Setup credentials
 cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+
+# Initialize Hunyuan client (singleton pattern)
+def get_asr_client():
+    return  asr_client.AsrClient(cred, "ap-guangzhou")
+
+def get_tts_client():
+    return tts_client.TtsClient(cred, "ap-guangzhou") 
+
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
@@ -63,10 +68,10 @@ def tencent_tts(text):
     req = tts_models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
     req.from_json_string(str(params).replace("'", '"'))  # Convert dict to JSON string
 
-    tc_tts_client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
+    client = get_tts_client()
     # Request and save
     try:
-        resp = tc_tts_client.TextToVoice(req)
+        resp = client.TextToVoice(req)
         audio_bytes = base64.b64decode(resp.Audio)
         
         print(f"File size: {len(audio_bytes)/1024:.2f} KB")
@@ -110,8 +115,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         req = asr_models.SentenceRecognitionRequest()
         req.from_json_string(json.dumps(params))
 
-        tc_asr_client = asr_client.AsrClient(cred, "ap-guangzhou")
-        resp = tc_asr_client.SentenceRecognition(req)
+        client = get_asr_client()
+        resp = client.SentenceRecognition(req)
 
         transcription = resp.Result
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
