@@ -22,16 +22,8 @@ import base64
 if shutil.which("ffmpeg") is None:
     raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
-TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID")
-TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
-TENCENT_HUNYUAN_SECRET_ID = os.getenv("TENCENT_HUNYUAN_SECRET_ID")
-TENCENT_HUNYUAN_SECRET_KEY = os.getenv("TENCENT_HUNYUAN_SECRET_KEY")
-
-if not TENCENT_SECRET_ID or not TENCENT_SECRET_KEY:
-    print("[ERROR] Tencent Cloud credentials are not set.")
-else:
-    print("[INFO] Tencent Cloud credentials loaded.")
-
+TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID_CN")
+TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY_CN")
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
@@ -51,7 +43,7 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     return wav_bytes
 
 # Setup credentials
-cred = credential.Credential(TENCENT_HUNYUAN_SECRET_ID, TENCENT_HUNYUAN_SECRET_KEY)
+cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
 client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
 
 def tencent_tts(text):
@@ -103,7 +95,6 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         audio_base64 = base64.b64encode(raw_wav).decode()
 
         # Tencent ASR request
-        cred = credential.Credential(TENCENT_HUNYUAN_SECRET_ID, TENCENT_HUNYUAN_SECRET_KEY)
         client = asr_client.AsrClient(cred, "ap-guangzhou")
         req = asr_models.SentenceRecognitionRequest()
 
@@ -143,8 +134,6 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # Now return it safely
         return extraction
-
-
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
