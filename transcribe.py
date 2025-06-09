@@ -25,6 +25,9 @@ if shutil.which("ffmpeg") is None:
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID_CN")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY_CN")
 
+# Setup credentials
+cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
         webm_file.write(webm_bytes)
@@ -42,13 +45,9 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
 
     return wav_bytes
 
-# Setup credentials
-cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
 
 def tencent_tts(text):
     # Request setup (CORRECT: Using TextToVoiceRequest)
-    req = tts_models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
     params = {
         "Text": text,
         "SessionId": "test-123",
@@ -60,11 +59,14 @@ def tencent_tts(text):
         "ProjectId": 0,
         "SampleRate": 16000
     }
+
+    req = tts_models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
     req.from_json_string(str(params).replace("'", '"'))  # Convert dict to JSON string
 
+    tc_tts_client = tts_client.TtsClient(cred, "ap-guangzhou")  # Adjust region if needed
     # Request and save
     try:
-        resp = client.TextToVoice(req)
+        resp = tc_tts_client.TextToVoice(req)
         audio_bytes = base64.b64decode(resp.Audio)
         
         print(f"File size: {len(audio_bytes)/1024:.2f} KB")
@@ -94,10 +96,6 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Encode for Tencent ASR
         audio_base64 = base64.b64encode(raw_wav).decode()
 
-        # Tencent ASR request
-        client = asr_client.AsrClient(cred, "ap-guangzhou")
-        req = asr_models.SentenceRecognitionRequest()
-
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
@@ -109,8 +107,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         }
 
         print("[INFO] Sending transcription request to Tencent Cloud...")
+        req = asr_models.SentenceRecognitionRequest()
         req.from_json_string(json.dumps(params))
-        resp = client.SentenceRecognition(req)
+
+        tc_asr_client = asr_client.AsrClient(cred, "ap-guangzhou")
+        resp = tc_asr_client.SentenceRecognition(req)
 
         transcription = resp.Result
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
