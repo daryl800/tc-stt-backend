@@ -119,12 +119,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         resp = client.SentenceRecognition(req)
 
         transcription = resp.Result
+        print(f"[INFO] Transcription result: {transcription}")
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Extract event info
         extraction = extract_event_info(transcription)
-
-        print(f"[INFO] Transcription result: {transcription}")
         print(f"[INFO] Extracted info: {extraction}")
 
         # Add the raw_wav and text fields to the extraction
