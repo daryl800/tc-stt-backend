@@ -91,24 +91,13 @@ def extract_event_info(text):
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
 
-        # return {
-        #     "createdAt": datetime.now().isoformat(),
-        #     "text": text,
-        #     "mainEvent": data.get("event", ""),
-        #     "reminderDatetime": data.get("reminderDatetime", ""),
-        #     "location": ", ".join(data.get("location", [])),
-        #     "isReminder": data.get("isReminder", False),
-        #     "category": "Reminder",
-        #     "tags": list(set(data.get("location", [])))
-        # }
-    
         # Return the data as a Pydantic MemoryItem
         return MemoryItem(
             createdAt=datetime.now().isoformat(),
             text=text,
             mainEvent=data.get("event", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
-            location=", ".join(data.get("location", [])),
+            location=data.get("location", []),  # This will now be a list
             isReminder=data.get("isReminder", False),
             category="Reminder",
             tags=list(set(data.get("location", [])))
