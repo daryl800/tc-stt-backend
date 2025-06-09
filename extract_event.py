@@ -25,103 +25,103 @@ def extract_event_info(text):
         # Initialize client (thread-safe)
         client = get_hunyuan_client()
         
-        # prompt = f"""
-        # [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-        
-        # Extract from Cantonese:
-        # "{text}"
-        
-        # Please output ONLY a JSON object with the following fields:
-        # - "event": Short action/plan summary (omit reminder words)
-        # - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
-        # - "location": List of places mentioned (e.g., 香港, 瑞典)
-        # - "isReminder": true if it includes 提我/提醒我
-        # - "tags": List of keywords including:
-        #     - Locations (e.g., 香港)
-        #     - People/entities (e.g., 我個仔, 屋企人)
-        #     - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
-        
-        # Time Handling Rules:
-        # 1. Cantonese weekdays:
-        # - 「星期三」 means this week's Wednesday.
-        # - 「下星期三」 means next week's Wednesday (7 days after this week's Wednesday).
-        # - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
-
-        # 2. If only date mentioned → Add default time 09:00
-        # Example: "星期三開會" → "2025-06-11T09:00"
-
-        # 3. Time period defaults:
-        # - 朝早 / 上午 → 09:00
-        # - 晏晝 / 下午 → 14:00
-        # - 夜晚 / 晚上 → 20:00
-
-        # 4. Exact times (e.g., “下午三點”) should be preserved as-is.
-
-        # 5. If time is vague or uncertain → Use empty string for "reminderDatetime"
-
-        # 6. set "isReminder": true if the sentence contains 提我, 提提我, or 提醒我 (even as part of a longer phrase)
-
-        # → Interpret the date as the next upcoming matching date from today.
-        # Example:
-        # - If today is Monday, and text says “提醒我星期三”，then return this week's Wednesday.
-        # - If today is Friday and text says “提醒我星期三”，then return next week's Wednesday (as this week’s Wednesday is already past).
-
-        # → Always calculate the next valid date from today to avoid reminders set in the past.
-
-        # Tagging rules:
-        # 1. Tags should be useful for searching and grouping memories.
-        # 2. Tags should be short (1–5 words) and meaningful.
-        # 3. Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的".
-
-        # [OUTPUT FORMAT]
-        # {{
-        # "event": "事件描述",
-        # "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
-        # "location": ["地點"],
-        # "isReminder": true/false,
-        # "tags": ["香港", "我個仔", "出年", "旅行"]
-        # }}
-        # """
-
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-
-        Extract structured information from the following Cantonese sentence:
+        
+        Extract from Cantonese:
         "{text}"
-
+        
         Please output ONLY a JSON object with the following fields:
-        {
-        "event": "Short description of the action or plan (omit words like 記得, 提我, 提醒)",
-        "reminderDatetime": "Strict ISO 8601 format (e.g., '2025-06-12T14:00') or empty string if unclear",
-        "location": ["A list of places mentioned, such as 香港, 旺角"],
-        "isReminder": true if sentence contains 提我, 提提我, or 提醒我; false otherwise,
-        "tags": ["A list of meaningful keywords, such as 家人, 暑假, 醫生 (exclude filler words like 我, 啦, 的)"]
-        }
-
+        - "event": Short action/plan summary (omit reminder words)
+        - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
+        - "location": List of places mentioned (e.g., 香港, 瑞典)
+        - "isReminder": true if it includes 提我/提醒我
+        - "tags": List of keywords including:
+            - Locations (e.g., 香港)
+            - People/entities (e.g., 我個仔, 屋企人)
+            - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
+        
         Time Handling Rules:
-        1. Weekday Interpretation:
+        1. Cantonese weekdays:
         - 「星期三」 means this week's Wednesday.
-        - 「下星期三」 means next week's Wednesday.
-        - 「出年」、「下個月」、「下星期」 refer to the next full period.
+        - 「下星期三」 means next week's Wednesday (7 days after this week's Wednesday).
+        - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
 
-        2. If only a date is mentioned → default time is 09:00
+        2. If only date mentioned → Add default time 09:00
+        Example: "星期三開會" → "2025-06-11T09:00"
+
         3. Time period defaults:
         - 朝早 / 上午 → 09:00
         - 晏晝 / 下午 → 14:00
         - 夜晚 / 晚上 → 20:00
 
-        4. If time is vague, missing, or ambiguous → use empty string for "reminderDatetime"
+        4. Exact times (e.g., “下午三點”) should be preserved as-is.
 
-        5. If the sentence includes “提醒我” or “提我”:
-        - Calculate the next upcoming matching date from today.
-        - Example: if today is Monday and user says "提醒我星期三", return this week's Wednesday.
-        - If it's Friday and "星期三" is mentioned, return next week's Wednesday.
+        5. If time is vague or uncertain → Use empty string for "reminderDatetime"
+
+        6. set "isReminder": true if the sentence contains 提我, 提提我, or 提醒我 (even as part of a longer phrase)
+
+        → Interpret the date as the next upcoming matching date from today.
+        Example:
+        - If today is Monday, and text says “提醒我星期三”，then return this week's Wednesday.
+        - If today is Friday and text says “提醒我星期三”，then return next week's Wednesday (as this week’s Wednesday is already past).
+
+        → Always calculate the next valid date from today to avoid reminders set in the past.
 
         Tagging rules:
-        - Tags should help users search or group their memories.
-        - Keep tags short (1–5 words), clear, and meaningful.
-        - Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的"
+        1. Tags should be useful for searching and grouping memories.
+        2. Tags should be short (1–5 words) and meaningful.
+        3. Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的".
+
+        [OUTPUT FORMAT]
+        {{
+        "event": "事件描述",
+        "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
+        "location": ["地點"],
+        "isReminder": true/false,
+        "tags": ["香港", "我個仔", "出年", "旅行"]
+        }}
         """
+
+        # prompt = f"""
+        # [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+
+        # Extract structured information from the following Cantonese sentence:
+        # "{text}"
+
+        # Please output ONLY a JSON object with the following fields:
+        # {
+        # "event": "Short description of the action or plan (omit words like 記得, 提我, 提醒)",
+        # "reminderDatetime": "Strict ISO 8601 format (e.g., '2025-06-12T14:00') or empty string if unclear",
+        # "location": ["A list of places mentioned, such as 香港, 旺角"],
+        # "isReminder": true if sentence contains 提我, 提提我, or 提醒我; false otherwise,
+        # "tags": ["A list of meaningful keywords, such as 家人, 暑假, 醫生 (exclude filler words like 我, 啦, 的)"]
+        # }
+
+        # Time Handling Rules:
+        # 1. Weekday Interpretation:
+        # - 「星期三」 means this week's Wednesday.
+        # - 「下星期三」 means next week's Wednesday.
+        # - 「出年」、「下個月」、「下星期」 refer to the next full period.
+
+        # 2. If only a date is mentioned → default time is 09:00
+        # 3. Time period defaults:
+        # - 朝早 / 上午 → 09:00
+        # - 晏晝 / 下午 → 14:00
+        # - 夜晚 / 晚上 → 20:00
+
+        # 4. If time is vague, missing, or ambiguous → use empty string for "reminderDatetime"
+
+        # 5. If the sentence includes “提醒我” or “提我”:
+        # - Calculate the next upcoming matching date from today.
+        # - Example: if today is Monday and user says "提醒我星期三", return this week's Wednesday.
+        # - If it's Friday and "星期三" is mentioned, return next week's Wednesday.
+
+        # Tagging rules:
+        # - Tags should help users search or group their memories.
+        # - Keep tags short (1–5 words), clear, and meaningful.
+        # - Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的"
+        # """
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
