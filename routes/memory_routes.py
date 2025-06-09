@@ -17,10 +17,12 @@ app_id = os.getenv("LEANCLOUD_APP_ID")
 app_key = os.getenv("LEANCLOUD_APP_KEY")    
 app_endPoint = f"https://{app_id.lower()}.api.lncldglobal.com/1.1/files"
 
-def upload_audio_to_leancloud(filepath: str) -> str:
-    filename = os.path.basename(filepath)
-    with open(filepath, 'rb') as f:
-        file_data = f.read()
+
+import uuid
+
+def upload_audio_to_leancloud(audio_bytes: bytes, filename: str = None) -> str:
+    if not filename:
+        filename = f"memory_{uuid.uuid4().hex}.wav"
 
     headers = {
         "X-LC-Id": app_id,
@@ -28,11 +30,14 @@ def upload_audio_to_leancloud(filepath: str) -> str:
         "Content-Type": "audio/wav"
     }
 
-    url = f"{app_endPoint}/{filename}"
-    response = requests.post(url, headers=headers, data=file_data)
-    response.raise_for_status()
-    return response.json()["url"]  # ✅ File stored, returns its URL
+    response = requests.post(
+        app_endPoint + "/{filename}",
+        headers=headers,
+        data=audio_bytes  # ✅ send raw bytes
+    )
 
+    response.raise_for_status()
+    return response.json()["url"]
 
 @router.post("/")
 def save_memory(data: dict):
