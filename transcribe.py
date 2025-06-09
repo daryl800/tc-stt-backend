@@ -104,7 +104,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" if Cantonese
+            "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" for Cantonese
             "SourceType": 1,
             "VoiceFormat": voice_format,
             "UsrAudioKey": "test-key",
@@ -121,25 +121,33 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         transcription = resp.Result
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
-        category = classify_text(transcription)
+        # Extract event info
         extraction = extract_event_info(transcription)
 
         print(f"[INFO] Transcription result: {transcription}")
-        print(f"[INFO] Classified category: {category}")
         print(f"[INFO] Extracted info: {extraction}")
 
-        extraction["raw_wav"] = raw_wav  # used later for LeanCloud file upload
-        extraction["text"] = transcription
-        save_to_leancloud(extraction)  # This should handle saving audio too
+        # Add the raw_wav and text fields to the extraction
+        extraction.raw_wav = raw_wav  # This will be handled for LeanCloud file upload
+        extraction.text = transcription  # Ensure transcription text is set
+
+        # Save the data to LeanCloud
+        save_to_leancloud(extraction)  # This function will now handle saving audio as well
         print("[INFO] Memory saved successfully.")
 
-        extraction["tts_wav"] = tts_wav
-        
-        # Clean up non-serializable field
-        extraction.pop("raw_wav", None)
+        # Add TTS WAV for future reference (make sure LeanCloud can handle this)
+        extraction.tts_wav = tts_wav
 
-        # Now return it safely
-        return extraction
+        # Clean up non-serializable fields (raw_wav, if necessary)
+        extraction_dict = extraction.dict(exclude={"raw_wav"}, exclude_unset=True)
+
+        # Return the processed data as a clean dictionary
+        return extraction_dict
+
+    except Exception as e:
+        print(f"[ERROR] Transcription failed: {e}")
+        return {"error": str(e), "message": "An error occurred during transcription."}
+
 
     except Exception as e:
         print("[ERROR] Transcription failed:")
