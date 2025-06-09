@@ -1,4 +1,4 @@
-from leancloud_memory import Memory
+from models.leancloud_memory import Memory
 from models.memory_item import MemoryItem
 from datetime import datetime
 import requests
