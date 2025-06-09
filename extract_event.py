@@ -37,9 +37,9 @@ def extract_event_info(text):
         - "location": List of places mentioned (e.g., 香港, 瑞典)
         - "isReminder": true if it includes 提我/提醒我
         - "tags": List of keywords including:
-        - Locations (e.g., 香港)
-        - People/entities (e.g., 我個仔, 屋企人)
-        - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
+            - Locations (e.g., 香港)
+            - People/entities (e.g., 我個仔, 屋企人)
+            - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
         
         Time Handling Rules:
         1. Cantonese weekdays:
