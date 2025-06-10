@@ -5,18 +5,19 @@ import traceback
 import tempfile
 import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
+import base64
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-
-from classify import classify_text
-from dateutil import parser as date_parser  # pip install python-dateutil
-from extract_event import extract_info_fromLLM
-from utils.save_memory import save_to_leancloud  # assuming you placed the function here
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-import base64
+
+from dateutil import parser as date_parser  # pip install python-dateutil
+from extract_event import extract_info_fromLLM
+from utils.save_memory import save_to_leancloud  # assuming you placed the function here
+from utils.query_memory import search_for_answer  # assuming you placed the function here
+
 from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 if shutil.which("ffmpeg") is None:
@@ -135,6 +136,13 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # Clean up non-serializable fields (raw_wav, if necessary)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
+
+        if extraction.isQuestion:
+            answer = search_for_answer(extraction.mainEvent)
+            if answer:
+                print(f"[INFO] Memory saved successfully: {answer}")
+            else:
+                print(f"[INFO] No answer found for the question.")
 
         # Return the processed data as a clean dictionary
         return extraction_dict
