@@ -1,7 +1,6 @@
 from leancloud import Object, Query
 
-class MemoryItemDB(Object):
-    __className__ = 'Memories'
+MemoryItemDB = Object.extend('Memories')
 
 def search_for_answer(query: str):
     """
