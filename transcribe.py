@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from classify import classify_text
 from dateutil import parser as date_parser  # pip install python-dateutil
-from extract_event import extract_event_info_fromLLM
+from extract_event import extract_info_fromLLM
 from utils.save_memory import save_to_leancloud  # assuming you placed the function here
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
@@ -118,12 +118,12 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         client = get_asr_client()
         resp = client.SentenceRecognition(req)
 
-        transcribed_text = resp.Result
-        print(f"[INFO] Transcription result: {transcribed_text}")
-        tts_wav = base64.b64encode(tencent_tts(transcribed_text)).decode()
+        transcription = resp.Result
+        print(f"[INFO] Transcription result: {transcription}")
+        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Extract useful info from Hunyuan LLM
-        extraction = extract_event_info_fromLLM(transcribed_text)
+        extraction = extract_info_fromLLM(transcription)
         print(f"[INFO] Extracted info: {extraction}")
 
         # Save extracted data & and the original voice to LeanCloud (critical step)

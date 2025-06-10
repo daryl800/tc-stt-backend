@@ -14,7 +14,7 @@ def get_hunyuan_client():
     client_profile = ClientProfile(httpProfile=http_profile)
     return hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
 
-def extract_event_info_fromLLM(text):
+def extract_info_fromLLM(text):
     """
     Final optimized version with:
     - Proper client initialization
