@@ -119,7 +119,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         resp = client.SentenceRecognition(req)
 
         transcription = resp.Result
-        print(f"[INFO] Transcription result: {"已经帮你记录左，你头先既说话呢容：" + transcription}")
+        print(f"[INFO] Transcription result: {'已经帮你记录左，你头先既说话呢容：' + transcription}")
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Extract useful info from Hunyuan LLM
