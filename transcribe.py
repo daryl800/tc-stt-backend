@@ -16,7 +16,7 @@ from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentClo
 from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_info_fromLLM
 from utils.save_memory import save_to_leancloud  # assuming you placed the function here
-from utils.query_memory import search_for_answer  # assuming you placed the function here
+from utils.query_memory import search_past_events  # assuming you placed the function here
 
 from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
@@ -138,7 +138,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
         if extraction.isQuestion:
-            answer = search_for_answer(extraction.mainEvent)
+            answer = search_past_events(extraction.mainEvent)
             if answer:
                 print(f"[INFO] Found the answer: {answer.get('mainEvent', 'No answer found')}")
             else:

@@ -22,3 +22,26 @@ def search_for_answer(query: str):
     except Exception as e:
         print(f"[ERROR] Error querying memories: {e}")
         return None
+    
+
+def search_past_events(query_text: str):
+    memory_query = Query('Memories')
+    
+    # Filter for mainEvent containing keywords
+    memory_query.contains('mainEvent', query_text)
+    
+    # Add filter to only get events in the past (eventCreatedAt < now)
+    memory_query.less_than('eventCreatedAt', datetime.now())
+    
+    # Optional: sort by eventCreatedAt descending (latest past first)
+    memory_query.descending('eventCreatedAt')
+    
+    try:
+        results = memory_query.find()
+        if results:
+            return results
+        else:
+            return []
+    except Exception as e:
+        print(f"[ERROR] Error querying past events: {e}")
+        return []
