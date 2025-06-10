@@ -93,8 +93,6 @@ def extract_event_info(text):
 
         print(f"[INFO] data: {data}")
 
-
-
         memoryItem = MemoryItem(
             category="Reminder",
             transcription=text,

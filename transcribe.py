@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from classify import classify_text
 from dateutil import parser as date_parser  # pip install python-dateutil
-from extract_event import extract_event_info
+from extract_event import extract_event_info_fromLLM
 from utils.save_memory import save_to_leancloud  # assuming you placed the function here
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
@@ -93,13 +93,13 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Convert to WAV if needed
         if voice_format == "webm":
             print("[INFO] Converting webm to wav...")
-            raw_wav = convert_webm_to_wav(audio_bytes)
+            raw_voice_wav = convert_webm_to_wav(audio_bytes)
             voice_format = "wav"
         else:
-            raw_wav = audio_bytes  # already WAV
+            raw_voice_wav = audio_bytes  # already WAV
 
         # Encode for Tencent ASR
-        audio_base64 = base64.b64encode(raw_wav).decode()
+        audio_base64 = base64.b64encode(raw_voice_wav).decode()
 
         params = {
             "ProjectId": 0,
@@ -118,27 +118,23 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         client = get_asr_client()
         resp = client.SentenceRecognition(req)
 
-        transcription = resp.Result
-        print(f"[INFO] Transcription result: {transcription}")
-        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+        transcribed_text = resp.Result
+        print(f"[INFO] Transcription result: {transcribed_text}")
+        tts_wav = base64.b64encode(tencent_tts(transcribed_text)).decode()
 
-        # Extract event info
-        extraction = extract_event_info(transcription)
+        # Extract useful info from Hunyuan LLM
+        extraction = extract_event_info_fromLLM(transcribed_text)
         print(f"[INFO] Extracted info: {extraction}")
 
-        # Add the raw_wav and text fields to the extraction
-        extraction.raw_wav = raw_wav  # This will be handled for LeanCloud file upload
-        extraction.text = transcription  # Ensure transcription text is set
-
-        # Save the data to LeanCloud
-        save_to_leancloud(extraction)  # This function will now handle saving audio as well
+        # Save extracted data & and the original voice to LeanCloud (critical step)
+        save_to_leancloud(extraction, raw_voice_wav)  # This function will now handle saving audio as well
         print("[INFO] Memory saved successfully.")
 
-        # Add TTS WAV for future reference (make sure LeanCloud can handle this)
+        # Add TTS WAV to be returned to the FE 
         extraction.tts_wav = tts_wav
 
         # Clean up non-serializable fields (raw_wav, if necessary)
-        extraction_dict = extraction.dict(exclude={"raw_wav"}, exclude_unset=True)
+        extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
         # Return the processed data as a clean dictionary
         return extraction_dict

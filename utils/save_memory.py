@@ -36,8 +36,8 @@ def save_to_leancloud(memory_item: MemoryItem, audio_bytes: bytes = None) -> str
 
     # Audio
     if audio_bytes:
-        audio_url = upload_audio_to_leancloud(audio_bytes)
-        memory.set("audioUrl", audio_url)
+        voice_url = upload_audio_to_leancloud(audio_bytes)
+        memory.set("originalVoice_Url", voice_url)
 
     memory.save()
     print(f"[INFO] Memory saved with ID: {memory.id} at {datetime.now().isoformat()}")

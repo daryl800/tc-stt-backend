@@ -11,7 +11,7 @@ class MemoryItem(BaseModel):
     location: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     createdAt: datetime
-    audioFilename: Optional[str] = None
+    originalVoice_Url: Optional[str] = None
     rawLLMOutput: Optional[dict] = None
     sourceLang: Optional[str] = "yue-HK"
     userId: Optional[str] = None
