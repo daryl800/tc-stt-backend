@@ -131,7 +131,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print("[INFO] Memory saved successfully.")
 
         # Add TTS WAV to be returned to the FE 
-        extraction.tts_wav = tts_wav
+        extraction.ttsOutput = tts_wav
 
         # Clean up non-serializable fields (raw_wav, if necessary)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)

@@ -12,6 +12,6 @@ class MemoryItem(BaseModel):
     tags: List[str] = Field(default_factory=list)
     eventCreatedAt: Optional[datetime] = None
     originalVoice_Url: Optional[str] = None
-    rawLLMOutput: Optional[dict] = None
+    ttsOutput: Optional[str] = None
     sourceLang: Optional[str] = "yue-HK"
     userId: Optional[str] = None
