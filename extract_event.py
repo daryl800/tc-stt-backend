@@ -75,7 +75,7 @@ def extract_info_fromLLM(text):
 
         [OUTPUT FORMAT]
         {{
-        "event": "事件描述",
+        "mainEvent": "事件描述",
         "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
         "location": ["地點"],
         "isReminder": true/false,
@@ -96,7 +96,7 @@ def extract_info_fromLLM(text):
         memoryItem = MemoryItem(
             category="Reminder",
             transcription=text,
-            mainEvent=data.get("event", ""),
+            mainEvent=data.get("mainEvent", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
             isReminder=data.get("isReminder", False),
             location=list(set(data.get("location", []))),   # This will now be a list
@@ -110,22 +110,22 @@ def extract_info_fromLLM(text):
 
     except json.JSONDecodeError:
         return MemoryItem(
-            createdAt=datetime.now().isoformat(),
-            text=text,
+            eventCreatedAt=datetime.now().isoformat(),
+            transcription=text,
             mainEvent="",
             reminderDatetime="",
-            location="",
+            location=[],
             isReminder=False,
             category="Reminder",
             tags=[]
         )
     except Exception as e:
         return MemoryItem(
-            createdAt=datetime.now().isoformat(),
-            text=text,
+            eventCreatedAt=datetime.now().isoformat(),
+            transcription=text,
             mainEvent="",
             reminderDatetime="",
-            location="",
+            location=[],
             isReminder=False,
             category="Reminder",
             tags=[f"Error: {str(e)}"]
@@ -133,8 +133,8 @@ def extract_info_fromLLM(text):
 
 # Example test
 if __name__ == "__main__":
-    result = extract_event_info("星期三提醒我睇无线电视新闻")
+    result = extract_info_fromLLM("星期三提醒我睇无线电视新闻")
     print(result.json(indent=4))
 # Example test
 if __name__ == "__main__":
-    print(extract_event_info("星期三提醒我睇无线电视新闻"))
+    print(extract_info_fromLLM("星期三提醒我睇无线电视新闻"))
