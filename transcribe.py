@@ -136,7 +136,6 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # Clean up non-serializable fields (raw_wav, if necessary)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
-
         if extraction.isQuestion:
             answer = search_past_events(extraction.mainEvent)
             if answer:
@@ -144,11 +143,12 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                     for info in answer:
                         main_event = info.get('mainEvent')
                         print(f"[INFO] Mretrieved main_event: {main_event}")
-                    else:
-                        main_event = answer.get('mainEvent')
-                        print(f"[INFO] Mretrieved main_event: {main_event}")
+                else:
+                    main_event = answer.get('mainEvent')
+                    print(f"[INFO] Mretrieved main_event: {main_event}")
             else:
                 print(f"[INFO] No answer found for the question.")
+
 
         # Return the processed data as a clean dictionary
         return extraction_dict
