@@ -93,15 +93,17 @@ def extract_event_info(text):
 
         print(f"[INFO] data: {data}")
 
+
+
         memoryItem = MemoryItem(
-            createdAt=datetime.now().isoformat(),
-            text=text,
+            category="Reminder",
+            transcription=text,
             mainEvent=data.get("event", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
-            location=list(set(data.get("location", []))),   # This will now be a list
             isReminder=data.get("isReminder", False),
-            category="Reminder",
-            tags=list(set(data.get("tags", [])))  # Ensure tags are unique
+            location=list(set(data.get("location", []))),   # This will now be a list
+            tags=list(set(data.get("tags", []))),  # Ensure tags are unique
+            createdAt=datetime.now().isoformat()
         )
 
         print(f"[INFO] memoryItem: {memoryItem}")
