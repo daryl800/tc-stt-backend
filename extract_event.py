@@ -32,7 +32,7 @@ def extract_info_fromLLM(text):
         "{text}"
         
         Please output ONLY a JSON object with the following fields:
-        - "event": Short action/plan summary (omit reminder words)
+        - "mainEvent": Short action/plan summary (omit reminder words)
         - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
         - "location": List of places mentioned (e.g., 香港, 瑞典)
         - "isReminder": true if it includes 提我/提醒我
@@ -101,7 +101,7 @@ def extract_info_fromLLM(text):
             isReminder=data.get("isReminder", False),
             location=list(set(data.get("location", []))),   # This will now be a list
             tags=list(set(data.get("tags", []))),  # Ensure tags are unique
-            eventCreatedAt=datetime.now().isoformat
+            eventCreatedAt=datetime.now()
         )
 
         print(f"[INFO] memoryItem: {memoryItem}")
