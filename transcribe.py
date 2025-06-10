@@ -140,7 +140,13 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         if extraction.isQuestion:
             answer = search_past_events(extraction.mainEvent)
             if answer:
-                print(f"[INFO] Found the answer: {answer.get('mainEvent', 'No answer found')}")
+                if isinstance(answer, list):
+                    for info in answer:
+                        main_event = info.get('mainEvent')
+                        print(f"[INFO] Mretrieved main_event: {main_event}")
+                    else:
+                        main_event = answer.get('mainEvent')
+                        print(f"[INFO] Mretrieved main_event: {main_event}")
             else:
                 print(f"[INFO] No answer found for the question.")
 
