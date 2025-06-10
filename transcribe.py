@@ -118,7 +118,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         client = get_asr_client()
         resp = client.SentenceRecognition(req)
 
-        transcription = '已经帮你记录左，你头先既说话呢容：' + resp.Result
+        transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
         tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
@@ -132,6 +132,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # Add TTS WAV to be returned to the FE 
         extraction.ttsOutput = tts_wav
+
+        extraction.transcription = '已经帮你记录左，你头先既说话内容：' + extraction.transcription
 
         # Clean up non-serializable fields (raw_wav, if necessary)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)

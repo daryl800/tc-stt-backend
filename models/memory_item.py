@@ -8,6 +8,7 @@ class MemoryItem(BaseModel):
     mainEvent: str
     reminderDatetime: str = ""
     isReminder: bool = False
+    isQuestion: bool = False 
     location: List[str] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     eventCreatedAt: Optional[datetime] = None
