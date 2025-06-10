@@ -37,12 +37,22 @@ def extract_info_fromLLM(text):
         - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
         - "location": List of places mentioned (e.g., 香港, 瑞典)
         - "isReminder": true if it includes 提我/提醒我
-        - "isQuestion": true if the sentence is a question (e.g., "几时去旅行?", "记唔记得我阿妈几时返医院?")
+        - "isQuestion": true if the sentence asks about something, even indirectly (see below)
         - "tags": List of keywords including:
             - Locations (e.g., 香港)
             - People/entities (e.g., 我個仔, 屋企人)
             - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
         
+        Question Detection Rules:
+        1. Mark "isQuestion": true if the sentence is asking about something, including:
+            - When/what/where/why/how questions (e.g., 幾時, 乜嘢, 邊度, 點樣)
+            - Uncertainty or forgetfulness: phrases like 「有冇」、「記唔記得」、「係唔係」、「我有冇讲过」、「我好似讲过」、「我想问」、「我想知道」、「请问」
+            - Indirect/self-reflective questions such as:
+                - 「我唔記得我有冇講過...」
+                - 「我有冇問過...？」
+                - 「我係唔係已經...？」
+            - Any sentence where the speaker is trying to retrieve information, even about past conversations.
+
         Time Handling Rules:
         1. Cantonese weekdays:
         - 「星期三」 means this week's Wednesday.
