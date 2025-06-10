@@ -101,7 +101,7 @@ def extract_info_fromLLM(text):
             isReminder=data.get("isReminder", False),
             location=list(set(data.get("location", []))),   # This will now be a list
             tags=list(set(data.get("tags", []))),  # Ensure tags are unique
-            createdAt=datetime.now().isoformat()
+            createdAt=datetime.now().replace(microsecond=0).isoformat()
         )
 
         print(f"[INFO] memoryItem: {memoryItem}")
