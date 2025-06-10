@@ -4,4 +4,4 @@ class Memory(Object):
     pass
 
 # Bind to the correct class name in LeanCloud
-Memory = Object.extend('memories')
+Memory = Object.extend('Memories')
