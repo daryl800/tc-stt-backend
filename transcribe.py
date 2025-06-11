@@ -151,11 +151,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         for item in answer:
                             raw_date = item.get('eventCreatedAt', '')
                             try:
-                                dt = datetime.fromisoformat(raw_date)
-                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")  # e.g. "2025-06-11 21:30"
+                                # Parse with timezone support
+                                dt = datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S.%f%z")
+                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception:
-                                formatted_date = raw_date  # fallback if parsing fails
-                            event = item.get('transcription', '')
+                                formatted_date = raw_date  # fallback in case of error
                             segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
                         date = answer.get('createdAt', '')
