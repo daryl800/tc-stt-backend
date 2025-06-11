@@ -134,20 +134,24 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Add TTS WAV to be returned to the FE 
         extraction.ttsOutput = tts_wav
 
-        # Clean up non-serializable fields (raw_wav, if necessary)
+        # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
+
         if extraction.isQuestion:
-            answer = search_past_events(extraction.mainEvent)
+            answer = search_past_events(extraction)
             if answer:
                 if isinstance(answer, list):
                     for info in answer:
                         main_event = info.get('mainEvent')
-                        print(f"[INFO] Mretrieved main_event: {main_event}")
+                        tts_wav = base64.b64encode(tencent_tts(main_event)).decode()
+                    extraction.ttsOutput = tts_wav
                 else:
                     main_event = answer.get('mainEvent')
-                    print(f"[INFO] Mretrieved main_event: {main_event}")
+                    tts_wav = base64.b64encode(tencent_tts(main_event)).decode()
+                    extraction.ttsOutput = tts_wav
             else:
-                print(f"[INFO] No answer found for the question.")
+                tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
+                extraction.ttsOutput = tts_wav
 
 
         # Return the processed data as a clean dictionary

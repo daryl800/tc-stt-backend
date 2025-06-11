@@ -1,5 +1,6 @@
 from leancloud import Object, Query
 from datetime import datetime
+from models.memory_item import MemoryItem
 
 MemoryItemDB = Object.extend('Memories')
 
@@ -25,24 +26,52 @@ def search_for_answer(query: str):
         return None
     
 
-def search_past_events(query_text: str):
-    memory_query = Query('Memories')
-    
-    # Filter for mainEvent containing keywords
-    memory_query.contains('mainEvent', query_text)
-    
-    # Add filter to only get events in the past (eventCreatedAt < now)
-    memory_query.less_than('eventCreatedAt', datetime.now())
-    
-    # Optional: sort by eventCreatedAt descending (latest past first)
-    memory_query.descending('eventCreatedAt')
-    
+def search_past_events(llmExtraction: MemoryItem):
+    """
+    Search for past memory events that match the current query by comparing tags and location.
+    Only returns events created before the current one.
+    """
     try:
-        results = memory_query.find()
-        if results:
-            return results
-        else:
+        memory_query = Query('Memories')
+
+        # 1. Filter: eventCreatedAt < current one
+        memory_query.less_than('eventCreatedAt', llmExtraction.eventCreatedAt)
+
+        # 2. Filter by matching any tag (logical OR)
+        tags = llmExtraction.tags or []
+        locations = llmExtraction.location or []
+
+        # Combine all keywords for searching
+        keywords = set(tags + locations)
+
+        # If no keywords, just return nothing
+        if not keywords:
+            print("[INFO] No tags or locations to compare for search.")
             return []
+
+        # Filter memories that contain at least one matching tag
+        tag_subqueries = []
+        for keyword in keywords:
+            q = Query('Memories')
+            q.contains('tags', keyword)
+            tag_subqueries.append(q)
+
+        # Combine with OR
+        if tag_subqueries:
+            combined_query = tag_subqueries[0]
+            for q in tag_subqueries[1:]:
+                combined_query = combined_query.or_(q)
+
+            # Merge with main query (eventCreatedAt)
+            memory_query = memory_query.and_(combined_query)
+
+        # Sort by latest first
+        memory_query.descending('eventCreatedAt')
+
+        # Execute the query
+        results = memory_query.find()
+        return results or []
+
     except Exception as e:
         print(f"[ERROR] Error querying past events: {e}")
         return []
