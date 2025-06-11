@@ -43,7 +43,7 @@ def search_past_events(llmExtraction: MemoryItem):
 
         # Combine all keywords for searching
         keywords = set(tags + locations)
-        print("f[INFO] keywords for search: {keywords}")
+        print(f"[INFO] keywords for search: {keywords}")
 
         # If no keywords, just return nothing
         if not keywords:
