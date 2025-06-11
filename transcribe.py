@@ -151,8 +151,9 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         for item in answer:
                             raw_date = item.get('eventCreatedAt', '')
                             try:
-                                # Parse with timezone support
-                                dt = datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S.%f%z")
+                                # First remove the colon from the timezone offset if present
+                                adjusted_date = raw_date[:23] + raw_date[23:].replace(':', '')
+                                dt = datetime.strptime(adjusted_date, "%Y-%m-%d %H:%M:%S.%f%z")
                                 formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception:
                                 formatted_date = raw_date  # fallback in case of error
