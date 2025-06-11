@@ -122,7 +122,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
-        # tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+        # I prefer this to be done in the early stage
+        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Extract useful info from Hunyuan LLM
         extraction = extract_info_fromLLM(transcription)
@@ -134,9 +135,6 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         # # Add TTS WAV to be returned to the FE 
         # extraction.ttsOutput = tts_wav
-
-        # Remove non-serializable fields (original raw_wav)
-        extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
         # Handle question
         if extraction.isQuestion:
@@ -165,12 +163,15 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                 traceback.print_exc()
                 tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
-        else:
-            # Normal event — just TTS the original transcription
-            tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+        # else:
+        #     # Normal event — just TTS the original transcription
+        #     tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Set final TTS output
         extraction.ttsOutput = tts_wav
+
+        # Remove non-serializable fields (original raw_wav)
+        extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
         # Return the processed data as a clean dictionary
         return extraction_dict
