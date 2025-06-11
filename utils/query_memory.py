@@ -79,6 +79,8 @@ def search_past_events(llmExtraction: MemoryItem):
         # Execute
         results = final_query.find()
         print(f"[INFO] Found {len(results)} past events matching the criteria.")
+        for (result) in results:
+            print(f"[INFO] Past event: {result.get('mainEvent')} at {result.get('eventCreatedAt')}")
         return results or []
 
     except Exception as e:
