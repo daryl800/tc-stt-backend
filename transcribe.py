@@ -1,6 +1,8 @@
 import base64
 import json
 import os
+from pydub import AudioSegment
+import io
 import traceback
 import tempfile
 import ffmpeg # using ffmpeg to convert .webm audio to .wav
@@ -154,12 +156,16 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         event = answer.get('transcription', '')
                         segments.append(f"你系 {date} 讲过: {event}")
 
-                    # Merge all segments into one long string
-                    combined_text = "。".join(segments)
+                    combined = AudioSegment.empty()
 
-                    # Generate one valid WAV
-                    tts_wav = base64.b64encode(tencent_tts(combined_text)).decode()
+                    for text_segment in segments:
+                        tts_audio_bytes = tencent_tts(text_segment)
+                        audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+                        combined += audio_segment
 
+                    buf = io.BytesIO()
+                    combined.export(buf, format="wav")
+                    tts_wav = base64.b64encode(buf.getvalue()).decode()
                 else:
                     tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
 
