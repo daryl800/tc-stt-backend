@@ -57,8 +57,6 @@ def search_past_events(llmExtraction: MemoryItem):
             tag_subqueries.append(q)
 
         print(f"[INFO] Created {len(tag_subqueries)} tag subqueries for search.")
-        print(f"[INFO] tag_subqueries {tag_subqueries}")  
-
 
         # Combine tag subqueries with OR
         if len(tag_subqueries) > 1:
@@ -67,6 +65,8 @@ def search_past_events(llmExtraction: MemoryItem):
                 combined_query = combined_query.or_(q)  
             final_query = date_query.and_(combined_query)
         elif len(tag_subqueries) == 1:
+            print(f"[INFO] date_query: {date_query} tag subqueries for search.")
+            print(f"[INFO] tag_subqueries: {tag_subqueries[0]}")  
             final_query = date_query.and_(tag_subqueries[0])
         else:
             final_query = date_query
