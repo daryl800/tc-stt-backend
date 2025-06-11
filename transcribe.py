@@ -122,7 +122,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
-        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+        # tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
         # Extract useful info from Hunyuan LLM
         extraction = extract_info_fromLLM(transcription)
@@ -132,8 +132,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         save_to_leancloud(extraction, raw_voice_wav)  # This function will now handle saving audio as well
         print("[INFO] Memory saved successfully.")
 
-        # Add TTS WAV to be returned to the FE 
-        extraction.ttsOutput = tts_wav
+        # # Add TTS WAV to be returned to the FE 
+        # extraction.ttsOutput = tts_wav
 
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
