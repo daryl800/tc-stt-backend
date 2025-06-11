@@ -150,12 +150,12 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                     if isinstance(answer, list):
                         for item in answer:
                             raw_date = item.get('eventCreatedAt', '')
-                        try:
-                            # Parse with timezone support
-                            dt = datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S.%f%z")
-                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                        except Exception:
-                            formatted_date = raw_date  # fallback in case of error
+                            try:
+                                # Parse with timezone support
+                                dt = datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S.%f%z")
+                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                            except Exception:
+                                formatted_date = raw_date  # fallback in case of error
                             event = item.get('transcription', '')
                             segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
