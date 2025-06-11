@@ -155,7 +155,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                                 formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception:
                                 formatted_date = raw_date
-                            print("[INFO] formatted_date: {formatted_date}")
+                            print(f"[INFO] formatted_date: {formatted_date}")
                             event = item.get('transcription', '')
                             segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
