@@ -26,16 +26,16 @@ def search_for_answer(query: str):
         return None
     
 
+
 def search_past_events(llmExtraction: MemoryItem):
     """
     Search for past memory events that match the current query by comparing tags and location.
     Only returns events created before the current one.
     """
     try:
-        memory_query = Query('Memories')
-
         # 1. Filter: eventCreatedAt < current one
-        memory_query.less_than('eventCreatedAt', llmExtraction.eventCreatedAt)
+        date_query = Query('Memories')
+        date_query.less_than('eventCreatedAt', llmExtraction.eventCreatedAt)
 
         # 2. Filter by matching any tag (logical OR)
         tags = llmExtraction.tags or []
@@ -45,38 +45,35 @@ def search_past_events(llmExtraction: MemoryItem):
         keywords = set(tags + locations)
         print(f"[INFO] keywords for search: {keywords}")
 
-        # If no keywords, just return nothing
         if not keywords:
             print("[INFO] No tags or locations to compare for search.")
             return []
 
-        # Filter memories that contain at least one matching tag
+        # Create OR subqueries for tag matches
         tag_subqueries = []
         for keyword in keywords:
             q = Query('Memories')
             q.contains('tags', keyword)
             tag_subqueries.append(q)
 
-        # Combine with OR
+        # Combine tag subqueries with OR
         if tag_subqueries:
             combined_query = tag_subqueries[0]
             for q in tag_subqueries[1:]:
                 combined_query = combined_query.or_(q)
 
-            # Only AND if memory_query has existing filters
-            if memory_query._where:
-                memory_query = memory_query.and_(combined_query)
-            else:
-                memory_query = combined_query
+            # Now combine with AND: eventCreatedAt < current AND (tag matches)
+            final_query = date_query.and_(combined_query)
 
+        else:
+            final_query = date_query
 
         # Sort by latest first
-        memory_query.descending('eventCreatedAt')
+        final_query.descending('eventCreatedAt')
 
-        # Execute the query
-        results = memory_query.find()
+        # Execute
+        results = final_query.find()
         print(f"[INFO] Found {len(results)} past events matching the criteria.")
-        # If no results, return empty list
         return results or []
 
     except Exception as e:
