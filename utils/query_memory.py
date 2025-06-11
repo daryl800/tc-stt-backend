@@ -68,7 +68,6 @@ def search_past_events(llmExtraction: MemoryItem):
             print(f"[INFO] date_query: {date_query._where} tag subqueries for search.")
             print(f"[INFO] tag_subqueries: {tag_subqueries[0]._where}")  
             final_query = Query.and_(date_query, tag_subqueries[0])
-
         else:
             final_query = date_query
 

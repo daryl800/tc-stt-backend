@@ -141,18 +141,18 @@ async def transcribe_sync(audio: UploadFile = File(...)):
             answer = search_past_events(extraction)
             if answer:
                 if isinstance(answer, list):
-                    for info in answer:
-                        main_event = info.get('mainEvent')
-                        tts_wav = base64.b64encode(tencent_tts(main_event)).decode()
-                    extraction.ttsOutput = tts_wav
+                    for retrivement in answer:
+                        date = retrivement.get('createdAt')
+                        event = retrivement.get('transcription')
+                        tts_wav = tts_wav + base64.b64encode(tencent_tts("你系" + date + "讲过: " + event)).decode()
                 else:
-                    main_event = answer.get('mainEvent')
-                    tts_wav = base64.b64encode(tencent_tts(main_event)).decode()
-                    extraction.ttsOutput = tts_wav
+                    date = retrivement.get('createdAt')
+                    event = retrivement.get('transcription')
+                    tts_wav = base64.b64encode(tencent_tts("你系" + date + "讲过: " + event)).decode()
+                extraction.ttsOutput = tts_wav
             else:
                 tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
                 extraction.ttsOutput = tts_wav
-
 
         # Return the processed data as a clean dictionary
         return extraction_dict
