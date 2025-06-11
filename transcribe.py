@@ -154,7 +154,8 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         event = answer.get('transcription', '')
                         segments.append(f"你系 {date} 讲过: {event}")
 
-                    tts_wav = "".join([base64.b64encode(tencent_tts(seg)).decode() for seg in segments])
+                    combined_wav = b"".join([tencent_tts(seg) for seg in segments])
+                    tts_wav = base64.b64encode(combined_wav).decode()
                 else:
                     tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
 
