@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 import json
 import os
 from pydub import AudioSegment
@@ -148,9 +149,14 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
                     if isinstance(answer, list):
                         for item in answer:
-                            date = item.get('createdAt', '')
+                            raw_date = item.get('eventCreatedAt', '')
+                            try:
+                                dt = datetime.fromisoformat(raw_date)
+                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")  # e.g. "2025-06-11 21:30"
+                            except Exception:
+                                formatted_date = raw_date  # fallback if parsing fails
                             event = item.get('transcription', '')
-                            segments.append(f"你系 {date} 讲过: {event}")
+                            segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
                         date = answer.get('createdAt', '')
                         event = answer.get('transcription', '')

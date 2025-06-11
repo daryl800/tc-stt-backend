@@ -71,7 +71,6 @@ def search_past_events(llmExtraction: MemoryItem):
         else:
             final_query = date_query
 
-
         # Sort by latest first
         final_query.descending('eventCreatedAt')
 
