@@ -56,17 +56,18 @@ def search_past_events(llmExtraction: MemoryItem):
             q.contains('tags', keyword)
             tag_subqueries.append(q)
 
+
         # Combine tag subqueries with OR
-        if tag_subqueries:
+        if len(tag_subqueries) > 1:
             combined_query = tag_subqueries[0]
             for q in tag_subqueries[1:]:
                 combined_query = combined_query.or_(q)
-
-            # Now combine with AND: eventCreatedAt < current AND (tag matches)
             final_query = date_query.and_(combined_query)
-
+        elif len(tag_subqueries) == 1:
+            final_query = date_query.and_(tag_subqueries[0])
         else:
             final_query = date_query
+
 
         # Sort by latest first
         final_query.descending('eventCreatedAt')
