@@ -43,6 +43,7 @@ def search_past_events(llmExtraction: MemoryItem):
 
         # Combine all keywords for searching
         keywords = set(tags + locations)
+        print("f[INFO] keywords for search: {keywords}")
 
         # If no keywords, just return nothing
         if not keywords:
@@ -70,6 +71,8 @@ def search_past_events(llmExtraction: MemoryItem):
 
         # Execute the query
         results = memory_query.find()
+        print(f"[INFO] Found {len(results)} past events matching the criteria.")
+        # If no results, return empty list
         return results or []
 
     except Exception as e:
