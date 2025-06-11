@@ -84,6 +84,7 @@ def tencent_tts(text):
             print("Solution: Purchase ")
 
 
+
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:
         print(f"[INFO] Received file: {audio.filename}")
@@ -137,22 +138,39 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
+        # Handle question
         if extraction.isQuestion:
-            answer = search_past_events(extraction)
-            if answer:
-                if isinstance(answer, list):
-                    for retrivement in answer:
-                        date = retrivement.get('createdAt')
-                        event = retrivement.get('transcription')
-                        tts_wav = tts_wav + base64.b64encode(tencent_tts("你系" + date + "讲过: " + event)).decode()
+            try:
+                answer = search_past_events(extraction)
+
+                if answer:
+                    segments = []
+
+                    if isinstance(answer, list):
+                        for item in answer:
+                            date = item.get('createdAt', '')
+                            event = item.get('transcription', '')
+                            segments.append(f"你系 {date} 讲过: {event}")
+                    else:
+                        date = answer.get('createdAt', '')
+                        event = answer.get('transcription', '')
+                        segments.append(f"你系 {date} 讲过: {event}")
+
+                    tts_wav = "".join([base64.b64encode(tencent_tts(seg)).decode() for seg in segments])
                 else:
-                    date = retrivement.get('createdAt')
-                    event = retrivement.get('transcription')
-                    tts_wav = base64.b64encode(tencent_tts("你系" + date + "讲过: " + event)).decode()
-                extraction.ttsOutput = tts_wav
-            else:
-                tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
-                extraction.ttsOutput = tts_wav
+                    tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
+
+            except Exception as e:
+                print("[ERROR] TTS for question failed:")
+                traceback.print_exc()
+                tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+
+        else:
+            # Normal event — just TTS the original transcription
+            tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+
+        # Set final TTS output
+        extraction.ttsOutput = tts_wav
 
         # Return the processed data as a clean dictionary
         return extraction_dict
