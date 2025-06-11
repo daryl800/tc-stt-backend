@@ -63,8 +63,12 @@ def search_past_events(llmExtraction: MemoryItem):
             for q in tag_subqueries[1:]:
                 combined_query = combined_query.or_(q)
 
-            # Merge with main query (eventCreatedAt)
-            memory_query = memory_query.and_(combined_query)
+            # Only AND if memory_query has existing filters
+            if memory_query._where:
+                memory_query = memory_query.and_(combined_query)
+            else:
+                memory_query = combined_query
+
 
         # Sort by latest first
         memory_query.descending('eventCreatedAt')
