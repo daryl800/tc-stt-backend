@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from models.memory_item import MemoryItem
-from utils.save_memory import save_to_leancloud
+from utils.save_memory import save_to_leancloud_async
 
 import json
 
@@ -17,7 +17,7 @@ async def save_memory_endpoint(memory_json: str = Form(...), audio: UploadFile =
         audio_bytes = await audio.read() if audio else None
 
         # Save to LeanCloud
-        memory_id = save_to_leancloud(memory_item, audio_bytes)
+        memory_id = save_to_leancloud_async(memory_item, audio_bytes)
 
         return {"status": "ok", "id": memory_id}
 
