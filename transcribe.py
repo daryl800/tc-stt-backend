@@ -88,6 +88,22 @@ def tencent_tts(text):
         if "PkgExhausted" in str(e):
             print("Solution: Purchase ")
 
+def group_segments_by_limit(segments, max_chars=1000):
+    chunks = []
+    current_chunk = ""
+    
+    for seg in segments:
+        if len(current_chunk) + len(seg) <= max_chars:
+            current_chunk += seg
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = seg
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
 
 
 async def transcribe_sync(audio: UploadFile = File(...)):
@@ -183,8 +199,11 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
                     combined = AudioSegment.empty()
 
-                    for text_segment in segments:
-                        tts_audio_bytes = tencent_tts(text_segment)
+
+                    tts_chunks = group_segments_by_limit(segments)
+                    
+                    for chunk in tts_chunks:
+                        tts_audio_bytes = tencent_tts(chunk)
                         audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
                         combined += audio_segment
 
