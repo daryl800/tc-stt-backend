@@ -21,7 +21,8 @@ async def transcribe(audio: UploadFile = File(...)):
         )
 
     try:
-        result = await run_in_threadpool(transcribe_sync, audio)
+        audio_bytes = await audio.read()
+        result = await transcribe_sync(audio.filename, audio_bytes)
         return {
             "success": True,
             "filename": audio.filename,

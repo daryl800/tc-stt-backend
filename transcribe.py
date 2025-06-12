@@ -113,11 +113,10 @@ def group_segments_by_limit(segments, max_chars=1000):
 
     return chunks
 
-async def transcribe_sync(audio: UploadFile = File(...)):
+async def transcribe_sync(filename: str, audio_bytes: bytes):
     try:
-        print(f"[INFO] Received file: {audio.filename}")
-        audio_bytes = await audio.read()
-        voice_format = audio.filename.split(".")[-1].lower()
+        print(f"[INFO] Received file: {filename}")
+        voice_format = filename.split(".")[-1].lower()
         print(f"[INFO] Detected audio format: {voice_format}")
 
         # Convert to WAV if needed
@@ -234,10 +233,5 @@ async def transcribe_sync(audio: UploadFile = File(...)):
 
     except Exception as e:
         print(f"[ERROR] Transcription failed: {e}")
-        return {"error": str(e), "message": "An error occurred during transcription."}
-
-
-    except Exception as e:
-        print("[ERROR] Transcription failed:")
         traceback.print_exc()
-        return {"error": str(e)}
+        return {"error": str(e), "message": "An error occurred during transcription."}
