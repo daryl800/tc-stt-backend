@@ -148,21 +148,30 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                     segments = []
 
                     if isinstance(answer, list):
-                        for item in answer:
-                            raw_date = item.get('eventCreatedAt', '')
-                            try:
-                                dt = datetime.fromisoformat(raw_date)
-                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                            except Exception:
-                                print(f"[INFO] formatted_date EXCEPTION")
-                                formatted_date = raw_date
-                            print(f"[INFO] formatted_date: {formatted_date}")
-                            event = item.get('transcription', '')
-                            segments.append(f"你系 {formatted_date} 讲过: {event}")
+                        raw_date = item.get('eventCreatedAt', '')
+                        try:
+                            # Fix format: replace space with 'T' to satisfy ISO format
+                            raw_date_fixed = raw_date.replace(" ", "T")
+                            dt = datetime.fromisoformat(raw_date_fixed)
+                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                        except Exception:
+                            print(f"[INFO] formatted_date EXCEPTION")
+                            formatted_date = raw_date
+                        print(f"[INFO] formatted_date: {formatted_date}")
+                        event = item.get('transcription', '')
+                        segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
-                        date = answer.get('createdAt', '')
+                        raw_date = answer.get('eventCreatedAt', '')
                         event = answer.get('transcription', '')
-                        segments.append(f"你系 {date} 讲过: {event}")
+                        try:
+                            # Fix format: replace space with 'T' to satisfy ISO format
+                            raw_date_fixed = raw_date.replace(" ", "T")
+                            dt = datetime.fromisoformat(raw_date_fixed)
+                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                        except Exception:
+                            print(f"[INFO] formatted_date EXCEPTION")
+                            formatted_date = raw_date
+                        segments.append(f"你系 {formatted_date} 讲过: {event}")
 
                     combined = AudioSegment.empty()
 
