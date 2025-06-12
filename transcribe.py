@@ -1,23 +1,19 @@
-import base64
-from datetime import datetime
-import json
-import os
-from pydub import AudioSegment
 import io
+import os
+import json
+import base64
 import traceback
 import tempfile
 import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
+from pydub import AudioSegment
 from dateutil import parser
 from datetime import datetime
 from fastapi import File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-
-from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_info_fromLLM
 from utils.save_memory import save_to_leancloud_async  # assuming you placed the function here
 from utils.query_memory import search_past_events  # assuming you placed the function here
@@ -116,8 +112,6 @@ def group_segments_by_limit(segments, max_chars=1000):
         chunks.append(current_chunk)
 
     return chunks
-
-
 
 async def transcribe_sync(audio: UploadFile = File(...)):
     try:

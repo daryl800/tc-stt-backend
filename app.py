@@ -6,8 +6,6 @@ from config.leancloud_init import init_leancloud
 init_leancloud()
 
 # ✅ Import routers
-from routes.memory_routes import router as memory_router
-from routes.classify_routes import router as classify_router
 from routes.transcribe_routes import router as transcribe_router
 
 app = FastAPI()
@@ -22,8 +20,6 @@ app.add_middleware(
 )
 
 # ✅ Route registration
-app.include_router(memory_router, prefix="/memory")
-app.include_router(classify_router, prefix="/classify")
 app.include_router(transcribe_router, prefix="/transcribe")
 
 # ✅ Health check
