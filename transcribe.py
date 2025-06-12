@@ -165,7 +165,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Extracted info: {extraction}")
 
         # Save extracted data & and the original voice to LeanCloud (critical step)
-        save_to_leancloud_async(extraction, raw_voice_wav)  # This function will now handle saving audio as well
+        await save_to_leancloud_async(extraction, raw_voice_wav)  # This function will now handle saving audio as well
         print("[INFO] Memory saved successfully.")
 
         # # Add TTS WAV to be returned to the FE 
