@@ -20,7 +20,7 @@ from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentClo
 
 from dateutil import parser as date_parser  # pip install python-dateutil
 from extract_event import extract_info_fromLLM
-from utils.save_memory import save_to_leancloud  # assuming you placed the function here
+from utils.save_memory import save_to_leancloud_async  # assuming you placed the function here
 from utils.query_memory import search_past_events  # assuming you placed the function here
 
 from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
@@ -165,7 +165,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
         print(f"[INFO] Extracted info: {extraction}")
 
         # Save extracted data & and the original voice to LeanCloud (critical step)
-        save_to_leancloud(extraction, raw_voice_wav)  # This function will now handle saving audio as well
+        save_to_leancloud_async(extraction, raw_voice_wav)  # This function will now handle saving audio as well
         print("[INFO] Memory saved successfully.")
 
         # # Add TTS WAV to be returned to the FE 
@@ -187,13 +187,10 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                                     dt = raw_date
                                 else:
                                     dt = parser.isoparse(raw_date)
-
                                 formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception as e:
-                                print(f"[INFO] formatted_date EXCEPTION: {e}")
                                 formatted_date = str(raw_date)
 
-                            print(f"[INFO] formatted_date: {formatted_date}")
                             event = item.get('transcription', '')
                             segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
@@ -204,15 +201,12 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                                 dt = raw_date
                             else:
                                 dt = parser.isoparse(raw_date)
-
                             formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                         except Exception as e:
-                            print(f"[INFO] formatted_date EXCEPTION: {e}")
                             formatted_date = str(raw_date)
                     segments.append(f"你系 {formatted_date} 讲过: {event}")
 
                     combined = AudioSegment.empty()
-
 
                     tts_chunks = group_segments_by_limit(segments)
                     
