@@ -88,22 +88,36 @@ def tencent_tts(text):
         if "PkgExhausted" in str(e):
             print("Solution: Purchase ")
 
+import re
+
+def clean_text(text):
+    # Remove unsupported/hidden characters
+    return re.sub(r"[^\S\r\n]", "", text)  # Removes most whitespace except \n
+
 def group_segments_by_limit(segments, max_chars=1000):
     chunks = []
     current_chunk = ""
-    
+
     for seg in segments:
+        seg = clean_text(seg)
         if len(current_chunk) + len(seg) <= max_chars:
             current_chunk += seg
         else:
             if current_chunk:
                 chunks.append(current_chunk)
-            current_chunk = seg
+            if len(seg) > max_chars:
+                # Force-split long segments
+                for i in range(0, len(seg), max_chars):
+                    chunks.append(seg[i:i+max_chars])
+                current_chunk = ""
+            else:
+                current_chunk = seg
 
     if current_chunk:
         chunks.append(current_chunk)
 
     return chunks
+
 
 
 async def transcribe_sync(audio: UploadFile = File(...)):
