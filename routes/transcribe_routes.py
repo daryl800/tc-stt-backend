@@ -8,15 +8,26 @@ logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
+ALLOWED_CONTENT_TYPES = {"audio/webm", "audio/wav", "audio/mpeg"}
+
 @router.post("/")
 async def transcribe(audio: UploadFile = File(...)):
-    print(f"Received file: {audio.filename} | content_type: {audio.content_type}")
+    logger.info(f"Received file: {audio.filename} | Content-Type: {audio.content_type}")
+
+    if audio.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {audio.content_type}. Supported types: {', '.join(ALLOWED_CONTENT_TYPES)}"
+        )
+
     try:
-        transcription = await run_in_threadpool(transcribe_sync, audio)
-        return transcription
+        result = await run_in_threadpool(transcribe_sync, audio)
+        return {
+            "success": True,
+            "filename": audio.filename,
+            "transcription": result,
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-
-
-
+        tb = traceback.format_exc()
+        logger.error(f"Error during transcription: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail="Internal Server Error: Transcription failed.")
