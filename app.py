@@ -23,7 +23,6 @@ app.add_middleware(
 
 # ✅ Route registration
 app.include_router(memory_router, prefix="/memory")
-app.include_router(classify_router, prefix="/classify")
 app.include_router(transcribe_router, prefix="/transcribe")
 
 # ✅ Health check
