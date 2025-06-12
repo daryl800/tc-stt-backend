@@ -8,7 +8,6 @@ import traceback
 import tempfile
 import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
-import base64
 from dateutil import parser
 from datetime import datetime
 from fastapi import File, UploadFile
