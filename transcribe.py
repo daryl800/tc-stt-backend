@@ -89,7 +89,7 @@ def clean_text(text):
     # Remove control characters except \n
     return re.sub(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]", "", text)
 
-def group_segments_by_limit(segments, max_chars=1000):
+def group_segments_by_limit(segments, max_chars=200):
     chunks = []
     current_chunk = ""
 
