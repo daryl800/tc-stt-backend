@@ -10,6 +10,7 @@ import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
 import base64
 from dateutil import parser
+from datetime import datetime
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from tencentcloud.common import credential
@@ -152,11 +153,15 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         for item in answer:
                             raw_date = item.get('eventCreatedAt', '')
                             try:
-                                dt = parser.isoparse(raw_date)
+                                if isinstance(raw_date, datetime):
+                                    dt = raw_date
+                                else:
+                                    dt = parser.isoparse(raw_date)
+
                                 formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception as e:
                                 print(f"[INFO] formatted_date EXCEPTION: {e}")
-                                formatted_date = raw_date
+                                formatted_date = str(raw_date)
 
                             print(f"[INFO] formatted_date: {formatted_date}")
                             event = item.get('transcription', '')
@@ -165,11 +170,15 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                         event = answer.get('transcription', '')
                         raw_date = item.get('eventCreatedAt', '')
                         try:
-                            dt = parser.isoparse(raw_date)
+                            if isinstance(raw_date, datetime):
+                                dt = raw_date
+                            else:
+                                dt = parser.isoparse(raw_date)
+
                             formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                         except Exception as e:
                             print(f"[INFO] formatted_date EXCEPTION: {e}")
-                            formatted_date = raw_date
+                            formatted_date = str(raw_date)
                     segments.append(f"你系 {formatted_date} 讲过: {event}")
 
                     combined = AudioSegment.empty()
