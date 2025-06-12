@@ -148,18 +148,19 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                     segments = []
 
                     if isinstance(answer, list):
-                        raw_date = item.get('eventCreatedAt', '')
-                        try:
-                            # Fix format: replace space with 'T' to satisfy ISO format
-                            raw_date_fixed = raw_date.replace(" ", "T")
-                            dt = datetime.fromisoformat(raw_date_fixed)
-                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                        except Exception:
-                            print(f"[INFO] formatted_date EXCEPTION")
-                            formatted_date = raw_date
-                        print(f"[INFO] formatted_date: {formatted_date}")
-                        event = item.get('transcription', '')
-                        segments.append(f"你系 {formatted_date} 讲过: {event}")
+                        for item in answer:
+                            raw_date = item.get('eventCreatedAt', '')
+                            try:
+                                # Fix format: replace space with 'T' to satisfy ISO format
+                                raw_date_fixed = raw_date.replace(" ", "T")
+                                dt = datetime.fromisoformat(raw_date_fixed)
+                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                            except Exception:
+                                print(f"[INFO] formatted_date EXCEPTION")
+                                formatted_date = raw_date
+                            print(f"[INFO] formatted_date: {formatted_date}")
+                            event = item.get('transcription', '')
+                            segments.append(f"你系 {formatted_date} 讲过: {event}")
                     else:
                         raw_date = answer.get('eventCreatedAt', '')
                         event = answer.get('transcription', '')
