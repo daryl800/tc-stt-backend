@@ -154,6 +154,7 @@ async def transcribe_sync(audio: UploadFile = File(...)):
                                 dt = datetime.fromisoformat(raw_date)
                                 formatted_date = dt.strftime("%Y-%m-%d %H:%M")
                             except Exception:
+                                print(f"[INFO] formatted_date EXCEPTION")
                                 formatted_date = raw_date
                             print(f"[INFO] formatted_date: {formatted_date}")
                             event = item.get('transcription', '')
