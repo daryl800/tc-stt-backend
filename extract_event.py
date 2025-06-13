@@ -98,7 +98,7 @@ def extract_info_fromLLM(text):
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-lite"  
+        req.Model = "hunyuan-standard"  
         req.Temperature = 0
 
         resp = client.ChatCompletions(req)
