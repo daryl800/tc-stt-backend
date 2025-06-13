@@ -12,12 +12,12 @@ ALLOWED_CONTENT_TYPES = {"audio/webm", "audio/wav", "audio/mpeg"}
 
 @router.post("/")
 async def transcribe(audio: UploadFile = File(...)):
-    logger.info(f"Received file: {audio.filename} | Content-Type: {audio.content_type}")
+    logger.info(f"[INFO] Received audio file: {audio.filename} | Content-Type: {audio.content_type}")
 
     if audio.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {audio.content_type}. Supported types: {', '.join(ALLOWED_CONTENT_TYPES)}"
+            detail=f"[INFO] Unsupported file type: {audio.content_type}. Supported types: {', '.join(ALLOWED_CONTENT_TYPES)}"
         )
 
     try:
@@ -30,5 +30,5 @@ async def transcribe(audio: UploadFile = File(...)):
         }
     except Exception as e:
         tb = traceback.format_exc()
-        logger.error(f"Error during transcription: {str(e)}\n{tb}")
+        logger.error(f"[ERROR] Error during transcription: {str(e)}\n{tb}")
         raise HTTPException(status_code=500, detail="Internal Server Error: Transcription failed.")

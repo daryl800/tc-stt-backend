@@ -8,11 +8,16 @@ from models.memory_item import MemoryItem
 from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 # Initialize Hunyuan client (singleton pattern)
+_hunyuan_client = None
+
 def get_hunyuan_client():
-    cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-    http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-    client_profile = ClientProfile(httpProfile=http_profile)
-    return hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
+    global _hunyuan_client
+    if _hunyuan_client is None:
+        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+        http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+        client_profile = ClientProfile(httpProfile=http_profile)
+        _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
+    return _hunyuan_client
 
 def extract_info_fromLLM(text):
     """
@@ -122,21 +127,11 @@ def extract_info_fromLLM(text):
         
         return memoryItem
 
-    except json.JSONDecodeError:
-        return MemoryItem(
-            eventCreatedAt=datetime.now().isoformat(),
-            transcription=text,
-            mainEvent="",
-            reminderDatetime="",
-            location=[],
-            isReminder=False,
-            isQuestion=False,
-            category="General",
-            tags=[]
-        )
     except Exception as e:
+        print(f"[ERROR] Exception during LLM extraction: {e}")
+        tags = [] if isinstance(e, json.JSONDecodeError) else [f"Error: {str(e)}"]
         return MemoryItem(
-            eventCreatedAt=datetime.now().isoformat(),
+            eventCreatedAt=datetime.now(),
             transcription=text,
             mainEvent="",
             reminderDatetime="",
@@ -144,8 +139,9 @@ def extract_info_fromLLM(text):
             isReminder=False,
             isQuestion=False,
             category="General",
-            tags=[f"Error: {str(e)}"]
+            tags=tags
         )
+
 
 # Example test
 if __name__ == "__main__":
