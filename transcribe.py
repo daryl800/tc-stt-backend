@@ -164,42 +164,82 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # extraction.ttsOutput = tts_wav
 
         # Handle question
+        # if extraction.isQuestion:
+        #     try:
+        #         answer = search_past_events(extraction)
+
+        #         if answer:
+        #             segments = []
+        #             if isinstance(answer, list):
+        #                 for item in answer:
+        #                     raw_date = item.get('eventCreatedAt', '')
+        #                     try:
+        #                         if isinstance(raw_date, datetime):
+        #                             dt = raw_date
+        #                         else:
+        #                             dt = parser.isoparse(raw_date)
+        #                         formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+        #                     except Exception as e:
+        #                         formatted_date = str(raw_date)
+
+        #                     event = item.get('transcription', '')
+        #                     segments.append(f"你系 {formatted_date} 讲过: {event}")
+        #             else:
+        #                 raw_date = item.get('eventCreatedAt', '')
+        #                 try:
+        #                     if isinstance(raw_date, datetime):
+        #                         dt = raw_date
+        #                     else:
+        #                         dt = parser.isoparse(raw_date)
+        #                     formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+        #                 except Exception as e:
+        #                     formatted_date = str(raw_date)
+        #                 event = answer.get('transcription', '')
+        #                 segments.append(f"你系 {formatted_date} 讲过: {event}")
+
+        #             combined = AudioSegment.empty()
+
+        #             tts_chunks = group_segments_by_limit(segments)
+                    
+        #             for chunk in tts_chunks:
+        #                 tts_audio_bytes = tencent_tts(chunk)
+        #                 audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+        #                 combined += audio_segment
+
+        #             buf = io.BytesIO()
+        #             combined.export(buf, format="wav")
+        #             tts_wav = base64.b64encode(buf.getvalue()).decode()
+        #         else:
+        #             tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
+
+        #     except Exception as e:
+        #         print("[ERROR] TTS for question failed:")
+        #         traceback.print_exc()
+        #         tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+
+
         if extraction.isQuestion:
             try:
-                answer = search_past_events(extraction)
+                answer = search_past_events(extraction)  # Always returns a list
+                segments = []
 
-                if answer:
-                    segments = []
+                # Loop through all results (works even if answer == [])
+                for item in answer:  # No need for isinstance(answer, list)
+                    raw_date = item.get('eventCreatedAt', '')
+                    try:
+                        if isinstance(raw_date, datetime):
+                            dt = raw_date
+                        else:
+                            dt = parser.isoparse(raw_date)
+                        formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                    except Exception as e:
+                        formatted_date = str(raw_date)
 
-                    if isinstance(answer, list):
-                        for item in answer:
-                            raw_date = item.get('eventCreatedAt', '')
-                            try:
-                                if isinstance(raw_date, datetime):
-                                    dt = raw_date
-                                else:
-                                    dt = parser.isoparse(raw_date)
-                                formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                            except Exception as e:
-                                formatted_date = str(raw_date)
-
-                            event = item.get('transcription', '')
-                            segments.append(f"你系 {formatted_date} 讲过: {event}")
-                    else:
-                        event = answer.get('transcription', '')
-                        raw_date = item.get('eventCreatedAt', '')
-                        try:
-                            if isinstance(raw_date, datetime):
-                                dt = raw_date
-                            else:
-                                dt = parser.isoparse(raw_date)
-                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                        except Exception as e:
-                            formatted_date = str(raw_date)
+                    event = item.get('transcription', '')
                     segments.append(f"你系 {formatted_date} 讲过: {event}")
 
+                if segments:  # If any matches found
                     combined = AudioSegment.empty()
-
                     tts_chunks = group_segments_by_limit(segments)
                     
                     for chunk in tts_chunks:
@@ -210,7 +250,7 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                     buf = io.BytesIO()
                     combined.export(buf, format="wav")
                     tts_wav = base64.b64encode(buf.getvalue()).decode()
-                else:
+                else:  # No matches found
                     tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
 
             except Exception as e:
