@@ -5,6 +5,7 @@ import base64
 import asyncio
 import traceback
 import tempfile
+import uuid
 import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
 from pydub import AudioSegment
@@ -67,16 +68,16 @@ def tencent_tts(text):
         "SampleRate": 16000
     }
 
+    client = get_tts_client()
+    # Request and save
     req = tts_models.TextToVoiceRequest()  # ✅ This is the correct class for TTS generation
     req.from_json_string(str(params).replace("'", '"'))  # Convert dict to JSON string
 
-    client = get_tts_client()
-    # Request and save
     try:
         resp = client.TextToVoice(req)
         audio_bytes = base64.b64decode(resp.Audio)
         
-        print(f"File size: {len(audio_bytes)/1024:.2f} KB")
+        print(f"[INFO] Size of data being sent to TC TTS: {len(audio_bytes)/1024:.2f} KB")
         return audio_bytes
 
     except Exception as e:
@@ -114,11 +115,21 @@ def group_segments_by_limit(segments, max_chars=200):
 
     return chunks
 
+
+def timed_extract_info(transcription):
+    import time
+    start = time.time()
+    result = extract_info_fromLLM(transcription)
+    print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
+    return result
+
+
 async def transcribe_sync(filename: str, audio_bytes: bytes):
     try:
-        print(f"[INFO] Received file: {filename}")
+        print(f"[INFO] Process begins ...")
+        client = get_asr_client()
+        print(f"[INFO] Received voice file: {filename}")
         voice_format = filename.split(".")[-1].lower()
-        print(f"[INFO] Detected audio format: {voice_format}")
 
         # Convert to WAV if needed
         if voice_format == "webm":
@@ -127,6 +138,10 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
             voice_format = "wav"
         else:
             raw_voice_wav = audio_bytes  # already WAV
+
+
+        # ✅ Now call Tencent ASR client — only after we know we have valid input
+        client = get_asr_client()
 
         # Encode for Tencent ASR
         audio_base64 = base64.b64encode(raw_voice_wav).decode()
@@ -137,25 +152,35 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
             "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" for Cantonese
             "SourceType": 1,
             "VoiceFormat": voice_format,
-            "UsrAudioKey": "test-key",
+            "UsrAudioKey": str(uuid.uuid4()),
             "Data": audio_base64,
         }
 
         print("[INFO] Sending transcription request to Tencent Cloud...")
         req = asr_models.SentenceRecognitionRequest()
-        req.from_json_string(json.dumps(params))
-
-        client = get_asr_client()
+        req.from_json_string(json.dumps(params))  
         resp = client.SentenceRecognition(req)
-
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
-        # I prefer this to be done in the early stage
-        tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
 
-        # Extract useful info from Hunyuan LLM
-        extraction = extract_info_fromLLM(transcription)
-        print(f"[INFO] Extracted info: {extraction}")
+        # # I prefer this to be done in the early stage
+        # tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
+
+        # # Extract useful info from Hunyuan LLM
+        # extraction = extract_info_fromLLM(transcription)
+        # print(f"[INFO] Extracted info: {extraction}")
+
+        # Parallelize TTS + LLM using asyncio.to_thread (if both are sync functions)
+        tts_task = asyncio.to_thread(tencent_tts, transcription)
+        # extract_task = asyncio.to_thread(extract_info_fromLLM, transcription)
+        extract_task = asyncio.to_thread(timed_extract_info, transcription)
+
+
+        # Wait for both in parallel
+        tts_bytes, extraction = await asyncio.gather(tts_task, extract_task)
+
+        # Base64 encode the final TTS WAV
+        tts_wav = base64.b64encode(tts_bytes).decode()
 
         # Save extracted data & and the original voice to LeanCloud (critical step)
         #await save_to_leancloud_async(extraction, raw_voice_wav)  # This function will now handle saving audio as well
@@ -163,10 +188,9 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         try:
             # Your saving logic
             asyncio.create_task(save_to_leancloud_async(extraction, raw_voice_wav))
-            print("[INFO] Memory saved successfully.")
+            print("[INFO] Start saving to memory ...")
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
-
 
         # # Add TTS WAV to be returned to the FE 
         # extraction.ttsOutput = tts_wav
