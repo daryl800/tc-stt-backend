@@ -10,7 +10,8 @@ import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
 from pydub import AudioSegment
 from dateutil import parser
-from datetime import datetime, time
+from datetime import datetime
+import time
 from fastapi import File, UploadFile
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
