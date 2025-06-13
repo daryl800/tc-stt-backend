@@ -17,7 +17,7 @@ from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-from extract_event import extract_info_fromLLM
+from llm_utils import extract_info_fromLLM, generate_reflection
 from utils.save_memory import save_to_leancloud_async  # assuming you placed the function here
 from utils.query_memory import search_past_events  # assuming you placed the function here
 
@@ -45,7 +45,9 @@ def convert_webm_to_wav(webm_bytes: bytes) -> bytes:
     wav_path = webm_path.replace(".webm", ".wav")
 
     try:
-        ffmpeg.input(webm_path).output(wav_path).run(overwrite_output=True, quiet=True)
+        # ffmpeg.input(webm_path).output(wav_path).run(overwrite_output=True, quiet=True)
+        ffmpeg.input(webm_path).output(wav_path, format='wav', acodec='pcm_s16le').run(overwrite_output=True, quiet=True)
+
         with open(wav_path, "rb") as f:
             wav_bytes = f.read()
     finally:
@@ -117,13 +119,19 @@ def group_segments_by_limit(segments, max_chars=200):
     return chunks
 
 
-def timed_extract_info(transcription):
+def extract_info_with_timing(transcription):
     import time
     start = time.time()
     result = extract_info_fromLLM(transcription)
     print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
     return result
 
+def generate_reflection_with_timing(transcription):
+    import time
+    start = time.time()
+    result = generate_reflection(transcription)
+    print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
+    return result
 
 async def transcribe_sync(filename: str, audio_bytes: bytes):
     try:
@@ -163,21 +171,17 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
 
-        # # I prefer this to be done in the early stage
-        # tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
-
-        # # Extract useful info from Hunyuan LLM
-        # extraction = extract_info_fromLLM(transcription)
-        # print(f"[INFO] Extracted info: {extraction}")
 
         # Parallelize TTS + LLM using asyncio.to_thread (if both are sync functions)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
         # extract_task = asyncio.to_thread(extract_info_fromLLM, transcription)
-        extract_task = asyncio.to_thread(timed_extract_info, transcription)
+        extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
+
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
             # Wait for both in parallel
-            tts_bytes, extraction = await asyncio.gather(tts_task, extract_task)
+            tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
             if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
                 raise ValueError("Empty or invalid TTS audio received.")
 
@@ -234,13 +238,20 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
-                tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+                try:
+                    tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+                except:
+                    tts_wav = ""
 
         # Set final TTS output
         extraction.ttsOutput = tts_wav
 
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
+
+
+        # ➕ Attach reflection to response but not database
+        extraction_dict["reflection"] = reflection
 
         print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
 

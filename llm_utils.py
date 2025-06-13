@@ -150,3 +150,42 @@ if __name__ == "__main__":
 # Example test
 if __name__ == "__main__":
     print(extract_info_fromLLM("星期三提醒我睇无线电视新闻"))
+
+
+def generate_reflection(text: str) -> str:
+    """
+    Generate a 20–30 second natural-sounding reflection or follow-up
+    based on what the user just said. The tone is friendly, supportive,
+    and memory-oriented. It also adds light特色資訊 to enhance usefulness.
+    """
+    try:
+        client = get_hunyuan_client()
+
+        prompt = f"""
+        你係一個有記憶力、貼心、識講廣東話的助理。根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
+
+        - 重點整理（幫佢重溫重點）
+        - 適量反應（如關心、認同、幽默）
+        - 有用的生活建議或提醒（如果適用）
+        - 如果提到地點（例如清遠），請自然地提及當地一個具代表性或最受歡迎的景點或活動（例如聚龍灣溫泉、森波拉溫泉小鎮、黃騰峽漂流等），建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
+
+        使用者啱啱講咗：
+        「{text}」
+
+        請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
+        """
+
+        req = models.ChatCompletionsRequest()
+        req.Messages = [{"Role": "user", "Content": prompt}]
+        req.Model = "hunyuan-standard"
+        req.Temperature = 0.7
+
+        resp = client.ChatCompletions(req)
+        reflection = resp.Choices[0].Message.Content.strip()
+
+        print(f"[INFO] Reflection: {reflection}")
+        return reflection
+
+    except Exception as e:
+        print(f"[ERROR] Reflection failed: {e}")
+        return "我記低咗你講嘅內容啦，有需要可以再問我！"
