@@ -10,7 +10,7 @@ import ffmpeg # using ffmpeg to convert .webm audio to .wav
 import shutil
 from pydub import AudioSegment
 from dateutil import parser
-from datetime import datetime
+from datetime import datetime, time
 from fastapi import File, UploadFile
 from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
@@ -127,7 +127,7 @@ def timed_extract_info(transcription):
 async def transcribe_sync(filename: str, audio_bytes: bytes):
     try:
         print(f"[INFO] Process begins ...")
-        client = get_asr_client()
+        process_start = time.time()
         print(f"[INFO] Received voice file: {filename}")
         voice_format = filename.split(".")[-1].lower()
 
@@ -175,15 +175,16 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # extract_task = asyncio.to_thread(extract_info_fromLLM, transcription)
         extract_task = asyncio.to_thread(timed_extract_info, transcription)
 
+        try:
+            # Wait for both in parallel
+            tts_bytes, extraction = await asyncio.gather(tts_task, extract_task)
+            if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
+                raise ValueError("Empty or invalid TTS audio received.")
 
-        # Wait for both in parallel
-        tts_bytes, extraction = await asyncio.gather(tts_task, extract_task)
-
-        # Base64 encode the final TTS WAV
-        tts_wav = base64.b64encode(tts_bytes).decode()
-
-        # Save extracted data & and the original voice to LeanCloud (critical step)
-        #await save_to_leancloud_async(extraction, raw_voice_wav)  # This function will now handle saving audio as well
+            tts_wav = base64.b64encode(tts_bytes).decode()
+        except Exception as e:
+            print(f"[ERROR] TTS or extraction failed: {e}")
+            tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         try:
             # Your saving logic
@@ -241,10 +242,13 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
 
+        print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
+
         # Return the processed data as a clean dictionary
         return extraction_dict
-
+        
     except Exception as e:
         print(f"[ERROR] Transcription failed: {e}")
         traceback.print_exc()
         return {"error": str(e), "message": "An error occurred during transcription."}
+    
