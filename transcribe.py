@@ -140,7 +140,6 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         else:
             raw_voice_wav = audio_bytes  # already WAV
 
-
         # ✅ Now call Tencent ASR client — only after we know we have valid input
         client = get_asr_client()
 
