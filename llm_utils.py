@@ -145,11 +145,11 @@ def extract_info_withLLM(text):
 
 # Example test
 if __name__ == "__main__":
-    result = extract_info_fromLLM("星期三提醒我睇无线电视新闻")
+    result = extract_info_withLLM("星期三提醒我睇无线电视新闻")
     print(result.json(indent=4))
 # Example test
 if __name__ == "__main__":
-    print(extract_info_fromLLM("星期三提醒我睇无线电视新闻"))
+    print(extract_info_withLLM("星期三提醒我睇无线电视新闻"))
 
 
 def generate_reflection(text: str) -> str:
