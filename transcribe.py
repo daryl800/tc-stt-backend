@@ -133,154 +133,6 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
-# async def transcribe_sync(filename: str, audio_bytes: bytes):
-#     try:
-#         print(f"[INFO] Process begins ...")
-#         process_start = time.time()
-#         print(f"[INFO] Received voice file: {filename}")
-#         voice_format = filename.split(".")[-1].lower()
-
-#         # Convert to WAV if needed
-#         if voice_format == "webm":
-#             print("[INFO] Converting webm to wav...")
-#             raw_voice_wav = convert_webm_to_wav(audio_bytes)
-#             voice_format = "wav"
-#         else:
-#             raw_voice_wav = audio_bytes  # already WAV
-
-#         # ✅ Now call Tencent ASR client — only after we know we have valid input
-#         client = get_asr_client()
-
-#         # Encode for Tencent ASR
-#         audio_base64 = base64.b64encode(raw_voice_wav).decode()
-
-#         params = {
-#             "ProjectId": 0,
-#             "SubServiceType": 2,
-#             "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" for Cantonese
-#             "SourceType": 1,
-#             "VoiceFormat": voice_format,
-#             "UsrAudioKey": str(uuid.uuid4()),
-#             "Data": audio_base64,
-#         }
-
-#         print("[INFO] Sending transcription request to Tencent Cloud...")
-#         req = asr_models.SentenceRecognitionRequest()
-#         req.from_json_string(json.dumps(params))  
-#         resp = client.SentenceRecognition(req)
-#         transcription = resp.Result
-#         print(f"[INFO] Transcription result: {transcription}")
-
-#         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
-#         # tts_task = asyncio.to_thread(tencent_tts, transcription)
-#         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-#         reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
-
-#         try:
-#             # Wait for all in parallel
-#             # tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
-#             # if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
-#             #     raise ValueError("Empty or invalid TTS audio received.")
-
-#             # tts_wav = base64.b64encode(tts_bytes).decode()
-
-#             extraction, reflection = await asyncio.gather(extract_task, reflection_task)
-
-#         except Exception as e:
-#             print(f"[ERROR] TTS or extraction failed: {e}")
-#             tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
-
-#         try:
-#             # 1) Save to DB IMMEDIATELY (without ttsOutput)
-#             extraction_for_db = extraction.copy()  # Create a clean copy
-#             if hasattr(extraction_for_db, 'ttsOutput'):
-#                 del extraction_for_db.ttsOutput  # Ensure no ttsOutput in DB version
-            
-#             # Fire-and-forget the DB save (don't await to return faster)
-#             print("[INFO] Start saving to memory ...")
-#             asyncio.create_task(
-#                 save_to_leancloud_async(extraction_for_db, raw_voice_wav)
-#             )
-
-#         except Exception as e:
-#             print(f"[ERROR] Failed to save to LeanCloud: {e}")
-
-#         # # Add TTS WAV to be returned to the FE 
-#         # extraction.ttsOutput = tts_wav
-
-#         if extraction.isQuestion:
-#             try:
-#                 answer = search_past_events(extraction)  # Always returns a list
-#                 segments = []
-
-#                 # Loop through all results (works even if answer == [])
-#                 for item in answer:  # No need for isinstance(answer, list)
-#                     raw_date = item.get('eventCreatedAt', '')
-#                     try:
-#                         if isinstance(raw_date, datetime):
-#                             dt = raw_date
-#                         else:
-#                             dt = parser.isoparse(raw_date)
-#                         formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-#                     except Exception as e:
-#                         formatted_date = str(raw_date)
-
-#                     event = item.get('transcription', '')
-#                     segments.append(f"你系 {formatted_date} 讲过: {event}")
-
-#                     if segments:  # If any matches found
-#                         combined = AudioSegment.empty()
-#                         tts_chunks = group_segments_by_limit(segments)
-                        
-#                         for chunk in tts_chunks:
-#                             tts_audio_bytes = tencent_tts(chunk)
-#                             audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-#                             combined += audio_segment
-
-#                         buf = io.BytesIO()
-#                         combined.export(buf, format="wav")
-#                         tts_wav = base64.b64encode(buf.getvalue()).decode()
-
-#                     else:  # No matches found
-#                         tts_wav = base64.b64encode(tencent_tts("你之前好似冇提过关于 " 
-#                                                             + answer.get('eventCreatedAt'), 
-#                                                             + "既内容。不过，我揾到以下的资料，你可以参考下。" 
-#                                                             + reflection )).decode()
-#             except Exception as e:
-#                 print("[ERROR] TTS for question failed:")
-#                 traceback.print_exc()
-#                 try:
-#                     tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
-#                 except:
-#                     tts_wav = ""
-#         else:
-#             tts_wav = base64.b64encode(tencent_tts("已经记低左 " + transcription )).decode()
-
-#         # Set final TTS output
-#         extraction.ttsOutput = tts_wav
-#         print("[DEBUG] extraction:", extraction)
-
-#         # Remove non-serializable fields (original raw_wav)
-#         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
-#         print("[DEBUG] extraction_dict:", extraction_dict)
-
-
-#         # ➕ Attach reflection to response but not database
-#         # extraction_dict["reflection"] = reflection
-
-#         # Return the processed data as a clean dictionary
-#         print("[DEBUG] Total response size (bytes):", len(json.dumps(extraction_dict)))
-#         print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
-
-
-#         return extraction_dict
-        
-#     except Exception as e:
-#         print(f"[ERROR] Transcription failed: {e}")
-#         traceback.print_exc()
-#         return {"error": str(e), "message": "An error occurred during transcription."}
-    
-
 async def transcribe_sync(filename: str, audio_bytes: bytes):
     try:
         print(f"[INFO] Process begins ...")
@@ -319,33 +171,37 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
 
-        # # I prefer this to be done in the early stage
-        # tts_wav = base64.b64encode(tencent_tts(transcription)).decode()
-
-        # # Extract useful info from Hunyuan LLM
-        # extraction = extract_info_fromLLM(transcription)
-        # print(f"[INFO] Extracted info: {extraction}")
-
-        # Parallelize TTS + LLM using asyncio.to_thread (if both are sync functions)
-        tts_task = asyncio.to_thread(tencent_tts, transcription)
-        # extract_task = asyncio.to_thread(extract_info_fromLLM, transcription)
-        extract_task = asyncio.to_thread(timed_extract_info, transcription)
+        # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
+        # tts_task = asyncio.to_thread(tencent_tts, transcription)
+        extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
-            # Wait for both in parallel
-            tts_bytes, extraction = await asyncio.gather(tts_task, extract_task)
-            if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
-                raise ValueError("Empty or invalid TTS audio received.")
+            # Wait for all in parallel
+            # tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
+            # if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
+            #     raise ValueError("Empty or invalid TTS audio received.")
 
-            tts_wav = base64.b64encode(tts_bytes).decode()
+            # tts_wav = base64.b64encode(tts_bytes).decode()
+
+            extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
             tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         try:
-            # Your saving logic
-            asyncio.create_task(save_to_leancloud_async(extraction, raw_voice_wav))
+            # 1) Save to DB IMMEDIATELY (without ttsOutput)
+            extraction_for_db = extraction.copy()  # Create a clean copy
+            if hasattr(extraction_for_db, 'ttsOutput'):
+                del extraction_for_db.ttsOutput  # Ensure no ttsOutput in DB version
+            
+            # Fire-and-forget the DB save (don't await to return faster)
             print("[INFO] Start saving to memory ...")
+            asyncio.create_task(
+                save_to_leancloud_async(extraction_for_db, raw_voice_wav)
+            )
+
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
@@ -372,38 +228,55 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                     event = item.get('transcription', '')
                     segments.append(f"你系 {formatted_date} 讲过: {event}")
 
-                if segments:  # If any matches found
-                    combined = AudioSegment.empty()
-                    tts_chunks = group_segments_by_limit(segments)
-                    
-                    for chunk in tts_chunks:
-                        tts_audio_bytes = tencent_tts(chunk)
-                        audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        combined += audio_segment
+                    if segments:  # If any matches found
+                        combined = AudioSegment.empty()
+                        tts_chunks = group_segments_by_limit(segments)
+                        
+                        for chunk in tts_chunks:
+                            tts_audio_bytes = tencent_tts(chunk)
+                            audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+                            combined += audio_segment
 
-                    buf = io.BytesIO()
-                    combined.export(buf, format="wav")
-                    tts_wav = base64.b64encode(buf.getvalue()).decode()
-                else:  # No matches found
-                    tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
+                        buf = io.BytesIO()
+                        combined.export(buf, format="wav")
+                        tts_wav = base64.b64encode(buf.getvalue()).decode()
 
+                    else:  # No matches found
+                        tts_wav = base64.b64encode(tencent_tts("你之前好似冇提过关于 " 
+                                                            + "既内容。不过，我揾到以下的资料，你可以参考下。" 
+                                                            + reflection )).decode()
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
-                tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+                try:
+                    tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+                except:
+                    tts_wav = ""
+        else:
+            tts_wav = base64.b64encode(tencent_tts("已经记低左 " + transcription )).decode()
 
         # Set final TTS output
         extraction.ttsOutput = tts_wav
+        print("[DEBUG] extraction:", extraction)
 
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
+        print("[DEBUG] extraction_dict:", extraction_dict)
 
-        print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
+
+        # ➕ Attach reflection to response but not database
+        # extraction_dict["reflection"] = reflection
 
         # Return the processed data as a clean dictionary
+        print("[DEBUG] Total response size (bytes):", len(json.dumps(extraction_dict)))
+        print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
+
+
         return extraction_dict
         
     except Exception as e:
         print(f"[ERROR] Transcription failed: {e}")
         traceback.print_exc()
-        return {"error": str(e), "message": "An error occurred during transcription."}    
+        return {"error": str(e), "message": "An error occurred during transcription."}
+    
+ below code works
