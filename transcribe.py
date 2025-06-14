@@ -191,12 +191,23 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
             tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         try:
-            # Your saving logic
+            # 1) Save to DB IMMEDIATELY (without ttsOutput)
+            extraction_for_db = extraction.copy()  # Create a clean copy
+            if hasattr(extraction_for_db, 'ttsOutput'):
+                del extraction_for_db.ttsOutput  # Ensure no ttsOutput in DB version
+            
+            # Fire-and-forget the DB save (don't await to return faster)
             print("[INFO] Start saving to memory ...")
-            asyncio.create_task(save_to_leancloud_async(extraction, raw_voice_wav))
+            asyncio.create_task(
+                save_to_leancloud_async(extraction_for_db, raw_voice_wav)
+            )
 
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
+
+
+
+
 
         # # Add TTS WAV to be returned to the FE 
         # extraction.ttsOutput = tts_wav
