@@ -19,7 +19,7 @@ def get_hunyuan_client():
         _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
     return _hunyuan_client
 
-def extract_info_fromLLM(text):
+def extract_info_withLLM(text):
     """
     Final optimized version with:
     - Proper client initialization

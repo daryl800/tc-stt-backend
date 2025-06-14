@@ -17,7 +17,7 @@ from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-from llm_utils import extract_info_fromLLM, generate_reflection
+from llm_utils import extract_info_withLLM, generate_reflection
 from utils.save_memory import save_to_leancloud_async  # assuming you placed the function here
 from utils.query_memory import search_past_events  # assuming you placed the function here
 
@@ -122,7 +122,7 @@ def group_segments_by_limit(segments, max_chars=200):
 def extract_info_with_timing(transcription):
     import time
     start = time.time()
-    result = extract_info_fromLLM(transcription)
+    result = extract_info_withLLM(transcription)
     print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
     return result
 
@@ -171,21 +171,21 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         transcription = resp.Result
         print(f"[INFO] Transcription result: {transcription}")
 
-
-        # Parallelize TTS + LLM using asyncio.to_thread (if both are sync functions)
+        # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
-        # extract_task = asyncio.to_thread(extract_info_fromLLM, transcription)
         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-
-        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
+        reflection_task = await asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
-            # Wait for both in parallel
-            tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
-            if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
-                raise ValueError("Empty or invalid TTS audio received.")
+            # Wait for all in parallel
+            # tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
+            # if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
+            #     raise ValueError("Empty or invalid TTS audio received.")
 
-            tts_wav = base64.b64encode(tts_bytes).decode()
+            # tts_wav = base64.b64encode(tts_bytes).decode()
+
+            extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
             tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
@@ -232,8 +232,12 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                     buf = io.BytesIO()
                     combined.export(buf, format="wav")
                     tts_wav = base64.b64encode(buf.getvalue()).decode()
+
                 else:  # No matches found
-                    tts_wav = base64.b64encode(tencent_tts("揾唔到相关资料！")).decode()
+                    tts_wav = base64.b64encode(tencent_tts("你之前好似冇提过关于 " 
+                                                           + answer.get('eventCreatedAt'), 
+                                                           + "既内容。不过，我揾到以下的资料，你可以参考下。" 
+                                                           + reflection )).decode()
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
@@ -242,6 +246,8 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                     tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
                 except:
                     tts_wav = ""
+        else:
+            tts_wav = base64.b64encode(tencent_tts("已经记低左 " + transcription )).decode()
 
         # Set final TTS output
         extraction.ttsOutput = tts_wav
@@ -251,11 +257,13 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
 
 
         # ➕ Attach reflection to response but not database
-        extraction_dict["reflection"] = reflection
-
-        print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
+        # extraction_dict["reflection"] = reflection
 
         # Return the processed data as a clean dictionary
+        print("[DEBUG] Total response size (bytes):", len(json.dumps(extraction_dict)))
+        print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
+
+
         return extraction_dict
         
     except Exception as e:
