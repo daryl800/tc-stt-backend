@@ -192,8 +192,9 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
 
         try:
             # Your saving logic
-            asyncio.create_task(save_to_leancloud_async(extraction, raw_voice_wav))
             print("[INFO] Start saving to memory ...")
+            asyncio.create_task(save_to_leancloud_async(extraction, raw_voice_wav))
+
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
@@ -220,25 +221,24 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                     event = item.get('transcription', '')
                     segments.append(f"你系 {formatted_date} 讲过: {event}")
 
-                if segments:  # If any matches found
-                    combined = AudioSegment.empty()
-                    tts_chunks = group_segments_by_limit(segments)
-                    
-                    for chunk in tts_chunks:
-                        tts_audio_bytes = tencent_tts(chunk)
-                        audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        combined += audio_segment
+                    if segments:  # If any matches found
+                        combined = AudioSegment.empty()
+                        tts_chunks = group_segments_by_limit(segments)
+                        
+                        for chunk in tts_chunks:
+                            tts_audio_bytes = tencent_tts(chunk)
+                            audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+                            combined += audio_segment
 
-                    buf = io.BytesIO()
-                    combined.export(buf, format="wav")
-                    tts_wav = base64.b64encode(buf.getvalue()).decode()
+                        buf = io.BytesIO()
+                        combined.export(buf, format="wav")
+                        tts_wav = base64.b64encode(buf.getvalue()).decode()
 
-                else:  # No matches found
-                    tts_wav = base64.b64encode(tencent_tts("你之前好似冇提过关于 " 
-                                                           + answer.get('eventCreatedAt'), 
-                                                           + "既内容。不过，我揾到以下的资料，你可以参考下。" 
-                                                           + reflection )).decode()
-
+                    else:  # No matches found
+                        tts_wav = base64.b64encode(tencent_tts("你之前好似冇提过关于 " 
+                                                            + answer.get('eventCreatedAt'), 
+                                                            + "既内容。不过，我揾到以下的资料，你可以参考下。" 
+                                                            + reflection )).decode()
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
