@@ -172,9 +172,9 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         print(f"[INFO] Transcription result: {transcription}")
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
-        tts_task = asyncio.to_thread(tencent_tts, transcription)
+        # tts_task = asyncio.to_thread(tencent_tts, transcription)
         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-        reflection_task = await asyncio.to_thread(generate_reflection_with_timing, transcription)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
             # Wait for all in parallel
