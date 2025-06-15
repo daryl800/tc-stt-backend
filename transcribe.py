@@ -182,7 +182,7 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
                 raise ValueError("Empty or invalid TTS audio received.")
 
             tts_wav = base64.b64encode(tts_bytes).decode()
-            #extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+
 
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
@@ -266,7 +266,6 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # extraction_dict["reflection"] = reflection
 
         # Return the processed data as a clean dictionary
-        print("[DEBUG] Total response size (bytes):", len(json.dumps(extraction_dict)))
         print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
 
         return extraction_dict
