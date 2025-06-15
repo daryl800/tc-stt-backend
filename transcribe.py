@@ -182,7 +182,7 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
             if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
                 raise ValueError("Empty or invalid TTS audio received.")
 
-            # tts_wav = base64.b64encode(tts_bytes).decode()
+            tts_wav = base64.b64encode(tts_bytes).decode()
             #extraction, reflection = await asyncio.gather(extract_task, reflection_task)
 
         except Exception as e:
