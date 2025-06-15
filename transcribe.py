@@ -2,6 +2,7 @@ import io
 import os
 import json
 import base64
+import time
 import asyncio
 import traceback
 import tempfile
@@ -120,14 +121,12 @@ def group_segments_by_limit(segments, max_chars=200):
 
 
 def extract_info_with_timing(transcription):
-    import time
     start = time.time()
     result = extract_info_withLLM(transcription)
     print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
     return result
 
 def generate_reflection_with_timing(transcription):
-    import time
     start = time.time()
     result = generate_reflection(transcription)
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
@@ -269,7 +268,6 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # Return the processed data as a clean dictionary
         print("[DEBUG] Total response size (bytes):", len(json.dumps(extraction_dict)))
         print("[DEBUG] Full transcription cycle took", round(time.time() - process_start, 2), "seconds")
-
 
         return extraction_dict
         
