@@ -255,12 +255,9 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
 
         # Set final TTS output
         extraction.ttsOutput = tts_wav
-        print("[DEBUG] extraction:", extraction)
 
         # Remove non-serializable fields (original raw_wav)
         extraction_dict = extraction.dict(exclude={"originalVoice_Url"}, exclude_unset=True)
-        print("[DEBUG] extraction_dict:", extraction_dict)
-
 
         # ➕ Attach reflection to response but not database
         # extraction_dict["reflection"] = reflection
