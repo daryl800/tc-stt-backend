@@ -25,8 +25,7 @@ async def transcribe(audio: UploadFile = File(...)):
         result = await transcribe_sync(audio.filename, audio_bytes)
         return {
             "success": True,
-            "filename": audio.filename,
-            "transcription": result,
+            "TranscriptionResponse": result,
         }
     except Exception as e:
         tb = traceback.format_exc()

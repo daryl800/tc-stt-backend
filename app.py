@@ -5,6 +5,8 @@ from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from config.leancloud_init import init_leancloud
+from fastapi import WebSocket, WebSocketDisconnect
+
 
 # ✅ Init LeanCloud first
 init_leancloud()
@@ -47,3 +49,24 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"message": "Internal server error", "detail": str(exc)},
     )
+
+
+# 🧠 Simple in-memory tracking of WebSocket clients
+connected_clients = set()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.add(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print(f"[WS] Received: {data}")
+
+            # Temporary placeholder response
+            await websocket.send_text("🧠 收到啦～稍後會幫你處理")
+
+            # 🔜 Later: trigger background task(s) to process transcription, reflection, etc.
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
+        print("[WS] Client disconnected")
