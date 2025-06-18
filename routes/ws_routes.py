@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import asyncio
 import base64
 import uuid
+import os
 
 router = APIRouter()
 
@@ -13,7 +14,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            print("📥 Received:", data)
+            print("📥 Received data from websocket")
 
             msg_type = data.get("type")
             payload = data.get("payload")
@@ -37,14 +38,17 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         if msg_type == "audio":
             audio_bytes = base64.b64decode(payload)
             # TODO: convert to WAV if needed, then transcribe
-            transcription = await dummy_transcribe(audio_bytes)
+            transcription = await transcribe_to_text(audio_bytes)
+            print(f"📥 transcription from voice : {transcription}")
         elif msg_type == "text":
             transcription = payload.strip()
+            print(f"📥 transcription from text: {transcription}")
         else:
             await websocket.send_json({
                 "type": "error",
                 "message": "Unsupported message type."
             })
+            print(f"📥 Error transcripting!")
             return
 
         # --- Step B: Send transcription as quick confirmation
@@ -74,10 +78,13 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         })
 
 
-# --- Dummy placeholder for transcription
-async def dummy_transcribe(audio_bytes):
-    await asyncio.sleep(1)
-    return "我啱啱講過想去澳門玩～"
+from utils.transcription import base64_to_wav_path, transcribe_tencent
+
+async def transcribe_to_text(audio_base64: str) -> str:
+    wav_path = await base64_to_wav_path(audio_base64)
+    result = await transcribe_tencent(wav_path)
+    os.remove(wav_path)
+    return result
 
 
 async def provide_insight_then_result(websocket: WebSocket, question: str):
