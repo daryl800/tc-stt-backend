@@ -1,6 +1,5 @@
 # utils/transcription.py
 
-import aiofiles
 import tempfile
 import base64
 import uuid
