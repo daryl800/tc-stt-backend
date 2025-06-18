@@ -81,6 +81,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 from utils.transcription import base64_to_wav_path, transcribe_tencent
 
 async def transcribe_to_text(audio_base64: str) -> str:
+    print("[INFO] Converting webm to wav...")
     wav_path = await base64_to_wav_path(audio_base64)
     result = await transcribe_tencent(wav_path)
     os.remove(wav_path)
