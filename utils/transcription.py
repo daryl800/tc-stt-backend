@@ -1,5 +1,7 @@
 # utils/transcription.py
 
+
+import tempfile
 import ffmpeg
 import base64
 import uuid
