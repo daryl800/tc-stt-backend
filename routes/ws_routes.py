@@ -19,6 +19,10 @@ async def websocket_endpoint(websocket: WebSocket):
             msg_type = data.get("type")
             payload = data.get("payload")
 
+            print(f"[DEBUG] Base64 payload first 100 chars: {payload[:100]}")
+            print(f"[DEBUG] Base64 payload length: {len(payload)}")
+
+
             # ✅ Step 2.1: Immediately respond with calming placeholder
             await websocket.send_json({
                 "type": "placeholder",

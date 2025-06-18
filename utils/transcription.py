@@ -1,6 +1,6 @@
 # utils/transcription.py
 
-import tempfile
+import ffmpeg
 import base64
 import uuid
 import sys
@@ -26,17 +26,21 @@ def get_asr_client():
 
 
 async def base64_to_wav_path(audio_base64: str) -> str:
-    audio_bytes = base64.b64decode(audio_base64)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_input:
-        tmp_input.write(audio_bytes)
-        tmp_input_path = tmp_input.name
+    webm_data = base64.b64decode(audio_base64)
 
-    wav_output_path = tmp_input_path.replace(".webm", ".wav")
-    audio = AudioSegment.from_file(tmp_input_path, format="webm")
-    audio.export(wav_output_path, format="wav")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
+        webm_file.write(webm_data)
+        webm_path = webm_file.name
 
-    os.remove(tmp_input_path)  # Clean up WebM
-    return wav_output_path
+    wav_path = webm_path.replace(".webm", ".wav")
+
+    # ✅ Convert using ffmpeg with proper format and codec
+    ffmpeg.input(webm_path).output(
+        wav_path, format='wav', acodec='pcm_s16le'
+    ).run(overwrite_output=True, quiet=True)
+
+    os.remove(webm_path)
+    return wav_path
 
 async def transcribe_tencent(wav_path: str) -> str:
     try:
