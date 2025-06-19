@@ -146,22 +146,20 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
                 # Generate and send audio replies sequentially
                 if segments:
-                    combined_audio = AudioSegment.empty()
+                    combined = AudioSegment.empty()
                     tts_chunks = group_segments_by_limit(segments)
                     
-                    audio_messages = []
                     for chunk in tts_chunks:
                         tts_audio_bytes = tencent_tts(chunk)
                         audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        combined_audio += audio_segment
-                    
+                        combined += audio_segment
+
                     buf = io.BytesIO()
-                    combined_audio.export(buf, format="wav")
-                    final_audio = base64.b64encode(buf.getvalue()).decode()
-                    audio_messages.append(final_audio)
+                    combined.export(buf, format="wav")
+                    response_tts_wav = base64.b64encode(buf.getvalue()).decode()
                     
                     # Send all audio sequentially with acknowledgments
-                    await send_audio_sequentially(websocket, audio_messages)
+                    await send_audio_sequentially(websocket, [response_tts_wav])
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
