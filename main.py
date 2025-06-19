@@ -70,9 +70,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
                 raise ValueError("Empty or invalid TTS audio received.")
 
-            print(f"[INFO - main] tts_bytes : {tts_bytes}")
-            print(f"[INFO - main] extraction : {extraction}")
-            print(f"[INFO - main] reflection : {reflection}")
             response_tts_wav = base64.b64encode(tts_bytes).decode()
 
         except Exception as e:
@@ -80,15 +77,10 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         try:
-            # 1) Save to DB IMMEDIATELY (without ttsOutput)
-            extraction_for_db = extraction.copy()  # Create a clean copy
-            if hasattr(extraction_for_db, 'ttsOutput'):
-                del extraction_for_db.ttsOutput  # Ensure no ttsOutput in DB version
-            
             # Fire-and-forget the DB save (don't await to return faster)
-            print("[INFO] Start saving to memory ...")
+            print(f"[INFO] Saving extraction to leanCloud: {extraction}")
             asyncio.create_task(
-                save_to_leancloud_async(extraction_for_db, wav_bytes)
+                save_to_leancloud_async(extraction, wav_bytes)
             )
 
         except Exception as e:
