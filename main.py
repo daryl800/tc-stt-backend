@@ -44,8 +44,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"📥 Error transcripting!")
             return
 
-        # --- Step B: Send transcription as quick confirmation
-        await reply_to_FE(websocket, 'text', transcription)
+        response_tts_wav = base64.b64encode(tencent_tts("✅ 收到你头先講嘅嘢，我而家會幫你處理，麻烦您比少少耐性 ...")).decode()
+        await reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
@@ -64,9 +64,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"[ERROR] TTS or extraction failed: {e}")
             response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
-        # Send TTS audio (base64)
-        await reply_to_FE(websocket, 'audio', response_tts_wav)
-
         # --- Step C: Determine if it's a question (about memory)
         is_question = "有冇" in transcription or "提過" in transcription or "講過" in transcription
 
@@ -74,12 +71,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # Simulate search taking 30s — provide insight first
             asyncio.create_task(provide_insight_then_result(websocket, transcription))
         else:
-            # Save memory and ask if user wants more info
-            await websocket.send_json({
-                "type": "saved",
-                "message": "✅ 記低咗喇！",
-                "ask_more": f"你想唔想我講多啲關於「{transcription}」？"
-            })
+            response_tts_wav = base64.b64encode(tencent_tts("✅ 你头先话 " + transcription + ", 我已经帮你记低左啦!")).decode() + 
+            await reply_to_FE(websocket, 'audio', response_tts_wav)
 
     except Exception as e:
         await websocket.send_json({

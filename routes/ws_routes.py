@@ -19,9 +19,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
             print(f"[DEBUG] Base64 payload length: {len(payload)}")
 
-            # ✅ Step 2.1: Immediately respond with calming placeholder
-            reply_to_FE(websocket, "placeholder", "🧠 好喇，等我幫你記住先～")
-
             # ✅ Step 2.2: Spawn async task
             asyncio.create_task(process_message(websocket, msg_type, payload))
 
