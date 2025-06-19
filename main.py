@@ -121,7 +121,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         if is_query:
             # Initial response (always sent first)
             initial_tts = base64.b64encode(
-                tencent_tts("咁樣你要俾啲耐性我，我而家幫你搵吓你之前有冇講過呢啲嘢啦！" + reflection)
+                tencent_tts("咁樣你要俾啲耐性我，我而家幫你搵吓你之前有冇講過呢啲嘢啦！")
             ).decode()
             await send_audio_sequentially(websocket, [initial_tts])
 
@@ -192,19 +192,3 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             "type": "error",
             "message": str(e)
         })
-
-
-async def query_history(websocket: WebSocket, query: str):
-    # Step 1: Insight or speculation
-    await websocket.send_json({
-        "type": "insight",
-        "message": "🔍 緊張搜尋中，不過我估你可能係想搵返你之前講過關於澳門嘅野～"
-    })
-
-    # Step 2: Simulate slow DB/search (real logic later)
-    await asyncio.sleep(6)
-
-    await websocket.send_json({
-        "type": "search_result",
-        "result": "你上星期三曾經講過『我想去澳門影下夜景』～"
-    })
