@@ -88,9 +88,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
 
         # --- Step C: Determine if it's a question (about memory)
-        is_question = "有冇" in transcription or "提過" in transcription or "講過" in transcription
+        is_query = "有冇" in transcription or "提過" in transcription or "講過" in transcription
 
-        if is_question:
+        if is_query:
             # Simulate search taking 30s — provide insight first
             asyncio.create_task(provide_insight_then_result(websocket, transcription))
         else:

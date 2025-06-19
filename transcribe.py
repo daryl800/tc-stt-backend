@@ -206,7 +206,7 @@ async def transcribe_sync(filename: str, audio_bytes: bytes):
         # # Add TTS WAV to be returned to the FE 
         # extraction.ttsOutput = tts_wav
 
-        if extraction.isQuestion:
+        if extraction.isQuery:
             try:
                 answer = search_past_events(extraction)  # Always returns a list
                 segments = []
