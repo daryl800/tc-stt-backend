@@ -93,10 +93,13 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
 
-        # --- Step C: Determine if it's a question (about memory)
-        is_query = "有冇" in transcription or "提過" in transcription or "講過" in transcription or "提及過" in transcription or "提及過关于" in transcription
+        # --- Step C: Determine if it's a query (about memory)
+        is_query = "有冇" in transcription or "提過" in transcription or "講過" in transcription or "有冇講過" in transcription or  "提及過" in transcription or "提及关于" in transcription
 
         if is_query:
+            response_tts_wav = base64.b64encode(tencent_tts("咁樣你要俾啲耐性我，我而家幫你搵吓你之前有冇講過呢啲嘢啦！" 
+                                                            + reflection )).decode()
+            await reply_to_FE(websocket, 'audio', response_tts_wav)
             try:
                 answer = search_past_events(extraction)  # Always returns a list
                 segments = []
