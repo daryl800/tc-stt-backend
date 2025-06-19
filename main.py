@@ -1,3 +1,4 @@
+import os
 import base64
 import asyncio
 import time
@@ -7,6 +8,7 @@ from utils.text_to_speech import tencent_tts
 from utils.transcription import transcribe_base64_webm_to_text
 from utils.llm_utils import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
+from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -32,8 +34,17 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
             # In process_message:
-            transcription = await transcribe_base64_webm_to_text(payload) 
-            print(f"📥 transcription from voice : {transcription}")
+            # transcription = await transcribe_base64_webm_to_text(payload) 
+            # print(f"📥 transcription from voice : {transcription}")
+
+            print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
+            audio_bytes = base64.b64decode(payload)
+            wav_path = await webm_bytes_to_wav_path(audio_bytes)
+            with open(wav_path, "rb") as f:
+                wav_bytes = f.read()
+            transcription = await transcribe_tencent(wav_path)
+            print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
+            os.remove(wav_path)
         elif msg_type == "text":
             transcription = payload.strip()
             print(f"📥 transcription from text: {transcription}")
@@ -74,7 +85,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # Fire-and-forget the DB save (don't await to return faster)
             print("[INFO] Start saving to memory ...")
             asyncio.create_task(
-                save_to_leancloud_async(extraction_for_db, raw_voice_wav)
+                save_to_leancloud_async(extraction_for_db, wav_bytes)
             )
 
         except Exception as e:
