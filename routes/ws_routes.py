@@ -40,9 +40,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
-            audio_bytes = base64.b64decode(payload)
+            webm_bytes = base64.b64decode(payload)  #payload here is actually webm
             # TODO: convert to WAV if needed, then transcribe
-            transcription = await transcribe_to_text(audio_bytes)
+            transcription = await transcribe_to_text(webm_bytes)
             print(f"📥 transcription from voice : {transcription}")
         elif msg_type == "text":
             transcription = payload.strip()

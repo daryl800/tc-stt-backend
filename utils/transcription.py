@@ -27,21 +27,40 @@ def get_asr_client():
     return  asr_client.AsrClient(cred, "ap-guangzhou")
 
 
-async def base64_to_wav_path(audio_base64: str) -> str:
-    webm_data = base64.b64decode(audio_base64)
+# async def base64_to_wav_path(audio_base64: str) -> str:
+#     webm_data = base64.b64decode(audio_base64)
 
+#     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
+#         webm_file.write(webm_data)
+#         webm_path = webm_file.name
+
+#     wav_path = webm_path.replace(".webm", ".wav")
+
+#     # ✅ Convert using ffmpeg with proper format and codec
+#     ffmpeg.input(webm_path).output(
+#         wav_path, format='wav', acodec='pcm_s16le'
+#     ).run(overwrite_output=True, quiet=True)
+
+#     os.remove(webm_path)
+#     return wav_path
+
+async def base64_to_wav_path(webm_bytes: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
-        webm_file.write(webm_data)
+        webm_file.write(webm_bytes)
         webm_path = webm_file.name
 
     wav_path = webm_path.replace(".webm", ".wav")
 
-    # ✅ Convert using ffmpeg with proper format and codec
-    ffmpeg.input(webm_path).output(
-        wav_path, format='wav', acodec='pcm_s16le'
-    ).run(overwrite_output=True, quiet=True)
+    try:
+        # ffmpeg.input(webm_path).output(wav_path).run(overwrite_output=True, quiet=True)
+        ffmpeg.input(webm_path).output(wav_path, format='wav', acodec='pcm_s16le').run(overwrite_output=True, quiet=True)
 
-    os.remove(webm_path)
+        with open(wav_path, "rb") as f:
+            wav_bytes = f.read()
+    finally:
+        os.remove(webm_path)
+        # os.remove(wav_path)
+
     return wav_path
 
 async def transcribe_tencent(wav_path: str) -> str:
