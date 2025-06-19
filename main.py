@@ -70,6 +70,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
                 raise ValueError("Empty or invalid TTS audio received.")
 
+            print(f"[INFO - main] tts_bytes : {tts_bytes}")
+            print(f"[INFO - main] extraction : {extraction}")
+            print(f"[INFO - main] reflection : {reflection}")
             response_tts_wav = base64.b64encode(tts_bytes).decode()
 
         except Exception as e:

@@ -11,7 +11,7 @@ def sync_save_memory(memory: Memory) -> str:
     memory.save()
     return memory.id
 
-async def save_to_leancloud_async(memory_item: MemoryItem, audio_bytes: bytes = None) -> str:
+async def save_to_leancloud_async(memory_item: MemoryItem, audio_bytes: bytes) -> str:
     memory = Memory()
 
     # Set basic fields (synchronous, but fast)
