@@ -35,6 +35,21 @@ async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
         "payload": payload
     })
 
+async def send_audio_sequentially(websocket, audio_messages):
+    for audio_wav in audio_messages:
+        # Send the audio chunk
+        await reply_to_FE(websocket, 'audio', audio_wav)
+        
+        # Wait for FE to confirm playback is done
+        try:
+            ack = await asyncio.wait_for(websocket.recv(), timeout=30.0)  # Adjust timeout as needed
+            if ack != "playback_done":
+                print("[WARNING] Unexpected playback acknowledgment:", ack)
+                break
+        except asyncio.TimeoutError:
+            print("[ERROR] Timeout waiting for playback confirmation")
+            break
+
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
@@ -108,7 +123,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             initial_tts = base64.b64encode(
                 tencent_tts("咁樣你要俾啲耐性我，我而家幫你搵吓你之前有冇講過呢啲嘢啦！" + reflection)
             ).decode()
-            await reply_to_FE(websocket, 'audio', initial_tts)
+            await send_audio_sequentially(websocket, [initial_tts])
 
             try:
                 answer = search_past_events(extraction)  # Assume this returns a list
@@ -131,23 +146,27 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
                 # Generate and send audio replies sequentially
                 if segments:
-                    combined = AudioSegment.empty()
+                    combined_audio = AudioSegment.empty()
                     tts_chunks = group_segments_by_limit(segments)
                     
+                    audio_messages = []
                     for chunk in tts_chunks:
                         tts_audio_bytes = tencent_tts(chunk)
                         audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        combined += audio_segment
-
+                        combined_audio += audio_segment
+                    
                     buf = io.BytesIO()
-                    combined.export(buf, format="wav")
-                    response_tts_wav = base64.b64encode(buf.getvalue()).decode()
-                    await reply_to_FE(websocket, 'audio', response_tts_wav)
+                    combined_audio.export(buf, format="wav")
+                    final_audio = base64.b64encode(buf.getvalue()).decode()
+                    audio_messages.append(final_audio)
+                    
+                    # Send all audio sequentially with acknowledgments
+                    await send_audio_sequentially(websocket, audio_messages)
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
                     ).decode()
-                    await reply_to_FE(websocket, 'audio', no_match_tts)
+                    await send_audio_sequentially(websocket, [no_match_tts])
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
