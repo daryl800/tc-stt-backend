@@ -141,6 +141,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 except:
                     response_tts_wav = ""  
 
+        else:
+            response_tts_wav = base64.b64encode(tencent_tts(reflection)).decode() 
             await reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # if is_query:
