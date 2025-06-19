@@ -44,8 +44,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"📥 Error transcripting!")
             return
 
-        response_tts_wav = base64.b64encode(tencent_tts("✅ 收到你头先講嘅嘢，我而家會幫你處理，麻烦您比少少耐性 ...")).decode()
-        await reply_to_FE(websocket, 'audio', response_tts_wav)
+        # response_tts_wav = base64.b64encode(tencent_tts("✅ 收到你头先講嘅嘢，我而家會幫你處理，麻烦您比少少耐性 ...")).decode()
+        # await reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
