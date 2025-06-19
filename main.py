@@ -71,7 +71,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # Simulate search taking 30s — provide insight first
             asyncio.create_task(provide_insight_then_result(websocket, transcription))
         else:
-            response_tts_wav = base64.b64encode(tencent_tts("✅ 你头先话 " + transcription + ", 我已经帮你记低左啦!")).decode() 
+            # response_tts_wav = base64.b64encode(tencent_tts("✅ 你头先话 " + transcription + ", 我已经帮你记低左啦!")).decode() 
+            response_tts_wav = base64.b64encode(tencent_tts(reflection)).decode() 
             await reply_to_FE(websocket, 'audio', response_tts_wav)
 
     except Exception as e:
