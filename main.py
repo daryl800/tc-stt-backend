@@ -4,7 +4,6 @@ import time
 
 from fastapi import WebSocket
 from utils.text_to_speech import tencent_tts
-from routes.ws_routes import reply_to_FE
 from utils.transcription import transcribe_base64_webm_to_text
 from utils.llm_utils import extract_info_withLLM, generate_reflection
 
@@ -19,6 +18,13 @@ def generate_reflection_with_timing(transcription):
     result = generate_reflection(transcription)
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
+
+
+async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
+    await websocket.send_json({
+        "type":  msg_type,
+        "payload": payload
+    })
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:

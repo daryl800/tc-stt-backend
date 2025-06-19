@@ -28,8 +28,3 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         print("❌ WebSocket disconnected")
 
-async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
-    await websocket.send_json({
-        "type":  msg_type,
-        "payload": payload
-    })
