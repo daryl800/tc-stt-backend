@@ -93,7 +93,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         # Send TTS audio (base64)
-        reply_to_FE(websocket, 'audio', response_tts_wav)
+        await reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # --- Step C: Determine if it's a question (about memory)
         is_question = "有冇" in transcription or "提過" in transcription or "講過" in transcription
