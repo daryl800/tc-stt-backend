@@ -4,6 +4,7 @@ import sys
 import os
 import uuid
 import json
+import shutil
 import ffmpeg
 import base64
 import wave
@@ -21,6 +22,9 @@ from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 # Setup credentials
 cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+
+if shutil.which("ffmpeg") is None:
+    raise EnvironmentError("ffmpeg is not installed or not in PATH")
 
 # Initialize Hunyuan client (singleton pattern)
 def get_asr_client():

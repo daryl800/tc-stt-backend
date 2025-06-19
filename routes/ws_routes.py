@@ -2,9 +2,13 @@
 import os
 import base64
 import asyncio
+import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
+from utils.text_to_speech import tencent_tts
+
+from llm_utils import extract_info_withLLM, generate_reflection
 
 router = APIRouter()
 
@@ -36,6 +40,18 @@ async def websocket_endpoint(websocket: WebSocket):
         print("❌ WebSocket disconnected")
 
 
+def extract_info_with_timing(transcription):
+    start = time.time()
+    result = extract_info_withLLM(transcription)
+    print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
+    return result
+
+def generate_reflection_with_timing(transcription):
+    start = time.time()
+    result = generate_reflection(transcription)
+    print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
+    return result
+
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
@@ -58,6 +74,29 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         await websocket.send_json({
             "type": "transcription",
             "text": transcription
+        })
+
+        # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
+        tts_task = asyncio.to_thread(tencent_tts, transcription)
+        extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
+
+        try:
+            # Wait for all in parallel
+            tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
+            if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
+                raise ValueError("Empty or invalid TTS audio received.")
+
+            response_tts_wav = base64.b64encode(tts_bytes).decode()
+
+        except Exception as e:
+            print(f"[ERROR] TTS or extraction failed: {e}")
+            response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+
+        # Send TTS audio (base64)
+        await websocket.send_json({
+            "type": "tts",
+            "audio": response_tts_wav
         })
 
         # --- Step C: Determine if it's a question (about memory)
