@@ -19,7 +19,7 @@ from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 from utils.llm_utils import extract_info_withLLM, generate_reflection
-from utils.save_memory import save_to_leancloud_async  # assuming you placed the function here
+from utils.db_utils import save_to_leancloud_async  # assuming you placed the function here
 from utils.query_memory import search_past_events  # assuming you placed the function here
 
 from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
