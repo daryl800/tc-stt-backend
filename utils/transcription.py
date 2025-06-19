@@ -82,3 +82,12 @@ async def transcribe_tencent(wav_path: str) -> str:
 
     except TencentCloudSDKException as e:
         return f"[Tencent ASR Error] {str(e)}"
+
+async def transcribe_base64_webm_to_text(audio_base64_webm: str) -> str:
+    print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
+    audio_bytes = base64.b64decode(audio_base64_webm)
+    wav_path = await webm_bytes_to_wav_path(audio_bytes)
+    result = await transcribe_tencent(wav_path)
+    print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {result}")
+    os.remove(wav_path)
+    return result
