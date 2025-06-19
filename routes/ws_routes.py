@@ -1,8 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-import asyncio
-import base64
-import uuid
+
 import os
+import base64
+import asyncio
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
 
 router = APIRouter()
 
@@ -19,9 +21,7 @@ async def websocket_endpoint(websocket: WebSocket):
             msg_type = data.get("type")
             payload = data.get("payload")
 
-            print(f"[DEBUG] Base64 payload first 100 chars: {payload[:100]}")
             print(f"[DEBUG] Base64 payload length: {len(payload)}")
-
 
             # ✅ Step 2.1: Immediately respond with calming placeholder
             await websocket.send_json({
@@ -40,9 +40,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
-            webm_bytes = base64.b64decode(payload)  #payload here is actually webm
-            # TODO: convert to WAV if needed, then transcribe
-            transcription = await transcribe_to_text(webm_bytes)
+            # In process_message:
+            transcription = await transcribe_base64_webm_to_text(payload)  # payload is still base64 string
             print(f"📥 transcription from voice : {transcription}")
         elif msg_type == "text":
             transcription = payload.strip()
@@ -81,16 +80,14 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             "message": str(e)
         })
 
-
-from utils.transcription import base64_to_wav_path, transcribe_tencent
-
-async def transcribe_to_text(audio_base64: str) -> str:
-    print("[INFO] Converting webm to wav...")
-    wav_path = await base64_to_wav_path(audio_base64)
+async def transcribe_base64_webm_to_text(audio_base64_webm: str) -> str:
+    print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
+    audio_bytes = base64.b64decode(audio_base64_webm)
+    wav_path = await webm_bytes_to_wav_path(audio_bytes)
     result = await transcribe_tencent(wav_path)
+    print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {result}")
     os.remove(wav_path)
     return result
-
 
 async def provide_insight_then_result(websocket: WebSocket, question: str):
     # Step 1: Insight or speculation

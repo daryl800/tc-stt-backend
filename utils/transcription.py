@@ -6,6 +6,7 @@ import uuid
 import json
 import ffmpeg
 import base64
+import wave
 import tempfile
 from tencentcloud.asr.v20190614 import asr_client, models
 from tencentcloud.common import credential
@@ -26,29 +27,9 @@ def get_asr_client():
     return  asr_client.AsrClient(cred, "ap-guangzhou")
 
 
-# async def base64_to_wav_path(audio_base64: str) -> str:
-#     webm_data = base64.b64decode(audio_base64)
-
-#     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
-#         webm_file.write(webm_data)
-#         webm_path = webm_file.name
-
-#     wav_path = webm_path.replace(".webm", ".wav")
-
-#     # ✅ Convert using ffmpeg with proper format and codec
-#     ffmpeg.input(webm_path).output(
-#         wav_path, format='wav', acodec='pcm_s16le'
-#     ).run(overwrite_output=True, quiet=True)
-
-#     os.remove(webm_path)
-#     return wav_path
-
-
-import wave
-
-async def base64_to_wav_path(webm_bytes: bytes) -> str:
+async def webm_bytes_to_wav_path(webm_bytes: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
-        webm_file.write(webm_bytes)
+        webm_file.write(webm_bytes) #write the webm bytes into a file
         webm_path = webm_file.name
 
     wav_path = webm_path.replace(".webm", ".wav")
