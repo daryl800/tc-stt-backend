@@ -6,6 +6,7 @@ from fastapi import WebSocket
 from utils.text_to_speech import tencent_tts
 from utils.transcription import transcribe_base64_webm_to_text
 from utils.llm_utils import extract_info_withLLM, generate_reflection
+from utils.db_utils import save_to_leancloud_async
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -63,6 +64,22 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
             response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+
+        try:
+            # 1) Save to DB IMMEDIATELY (without ttsOutput)
+            extraction_for_db = extraction.copy()  # Create a clean copy
+            if hasattr(extraction_for_db, 'ttsOutput'):
+                del extraction_for_db.ttsOutput  # Ensure no ttsOutput in DB version
+            
+            # Fire-and-forget the DB save (don't await to return faster)
+            print("[INFO] Start saving to memory ...")
+            asyncio.create_task(
+                save_to_leancloud_async(extraction_for_db, raw_voice_wav)
+            )
+
+        except Exception as e:
+            print(f"[ERROR] Failed to save to LeanCloud: {e}")
+
 
         # --- Step C: Determine if it's a question (about memory)
         is_question = "有冇" in transcription or "提過" in transcription or "講過" in transcription
