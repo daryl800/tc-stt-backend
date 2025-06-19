@@ -1,13 +1,12 @@
 # utils/transcription.py
 
-
-import tempfile
-import ffmpeg
-import base64
-import uuid
 import sys
 import os
+import uuid
 import json
+import ffmpeg
+import base64
+import tempfile
 from tencentcloud.asr.v20190614 import asr_client, models
 from tencentcloud.common import credential
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
@@ -44,7 +43,10 @@ def get_asr_client():
 #     os.remove(webm_path)
 #     return wav_path
 
-async def base64_to_wav_path(webm_bytes: bytes) -> bytes:
+
+import wave
+
+async def base64_to_wav_path(webm_bytes: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as webm_file:
         webm_file.write(webm_bytes)
         webm_path = webm_file.name
@@ -52,14 +54,20 @@ async def base64_to_wav_path(webm_bytes: bytes) -> bytes:
     wav_path = webm_path.replace(".webm", ".wav")
 
     try:
-        # ffmpeg.input(webm_path).output(wav_path).run(overwrite_output=True, quiet=True)
-        ffmpeg.input(webm_path).output(wav_path, format='wav', acodec='pcm_s16le').run(overwrite_output=True, quiet=True)
+        ffmpeg.input(webm_path).output(
+            wav_path, format='wav', acodec='pcm_s16le'
+        ).run(overwrite_output=True, quiet=True)
 
-        with open(wav_path, "rb") as f:
-            wav_bytes = f.read()
+        # ✅ Check if wav file exists and is non-empty
+        if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
+            raise RuntimeError("Converted WAV file is missing or empty")
+
+        # ✅ (Optional) Verify it's a valid WAV file
+        with wave.open(wav_path, 'rb') as wav_file:
+            wav_file.getparams()  # This will raise if file is invalid
+
     finally:
         os.remove(webm_path)
-        # os.remove(wav_path)
 
     return wav_path
 
