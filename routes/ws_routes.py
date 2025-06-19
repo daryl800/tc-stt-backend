@@ -52,12 +52,18 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
+async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
+    await websocket.send_json({
+        "type":  msg_type,
+        "audio": payload
+    })
+
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
             # In process_message:
-            transcription = await transcribe_base64_webm_to_text(payload)  # payload is still base64 string
+            transcription = await transcribe_base64_webm_to_text(payload) 
             print(f"📥 transcription from voice : {transcription}")
         elif msg_type == "text":
             transcription = payload.strip()
@@ -71,10 +77,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             return
 
         # --- Step B: Send transcription as quick confirmation
-        await websocket.send_json({
-            "type": "transcription",
-            "text": transcription
-        })
+        reply_to_FE(websocket, 'text', transcription)
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
@@ -94,10 +97,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
         # Send TTS audio (base64)
-        await websocket.send_json({
-            "type": "tts",
-            "audio": response_tts_wav
-        })
+        reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # --- Step C: Determine if it's a question (about memory)
         is_question = "有冇" in transcription or "提過" in transcription or "講過" in transcription
