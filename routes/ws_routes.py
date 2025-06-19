@@ -52,10 +52,10 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
-async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
+async def reply_to_FE(websocket: WebSocket, msg_type: str, content: str):
     await websocket.send_json({
         "type":  msg_type,
-        "audio": payload
+        "message": content
     })
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
