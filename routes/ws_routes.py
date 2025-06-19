@@ -28,17 +28,13 @@ async def websocket_endpoint(websocket: WebSocket):
             print(f"[DEBUG] Base64 payload length: {len(payload)}")
 
             # ✅ Step 2.1: Immediately respond with calming placeholder
-            await websocket.send_json({
-                "type": "placeholder",
-                "message": "🧠 好喇，等我幫你記住先～"
-            })
+            reply_to_FE(websocket, "placeholder", "🧠 好喇，等我幫你記住先～")
 
             # ✅ Step 2.2: Spawn async task
             asyncio.create_task(process_message(websocket, msg_type, payload))
 
     except WebSocketDisconnect:
         print("❌ WebSocket disconnected")
-
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -52,10 +48,10 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
-async def reply_to_FE(websocket: WebSocket, msg_type: str, content: str):
+async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
     await websocket.send_json({
         "type":  msg_type,
-        "message": content
+        "payload": payload
     })
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
@@ -77,7 +73,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             return
 
         # --- Step B: Send transcription as quick confirmation
-        reply_to_FE(websocket, 'text', transcription)
+        await reply_to_FE(websocket, 'text', transcription)
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
