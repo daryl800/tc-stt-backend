@@ -42,14 +42,14 @@ def extract_info_withLLM(text):
         - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
         - "location": List of places mentioned (e.g., 香港, 瑞典)
         - "isReminder": true if it includes 提我/提醒我
-        - "isQuestion": true if the sentence asks about something, even indirectly (see below)
+        - "isQuery": true if the sentence asks about something, even indirectly (see below)
         - "tags": List of keywords including:
             - Locations (e.g., 香港)
             - People/entities (e.g., 我個仔, 屋企人)
             - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
         
         Question Detection Rules:
-        1. Mark "isQuestion": true if the sentence is asking about something, including:
+        1. Mark "isQuery": true if the sentence is asking about something, including:
             - When/what/where/why/how questions (e.g., 幾時, 乜嘢, 邊度, 點樣)
             - Uncertainty or forgetfulness: phrases like 「有冇」、「記唔記得」、「係唔係」、「我有冇讲过」、「我好似讲过」、「我想问」、「我想知道」、「请问」
             - Indirect/self-reflective questions such as:
@@ -96,7 +96,7 @@ def extract_info_withLLM(text):
         "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
         "location": ["地點"],
         "isReminder": true/false,
-        "isQuestion": true/false,
+        "isQuery": true/false,
         "tags": ["香港", "我個仔", "出年", "旅行"]
         }}
         """
@@ -117,7 +117,7 @@ def extract_info_withLLM(text):
             mainEvent=data.get("mainEvent", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
             isReminder=data.get("isReminder", False),
-            isQuestion=data.get("isQuestion", False),
+            isQuery=data.get("isQuery", False),
             location=list(set(data.get("location", []))),   
             tags=list(set(data.get("tags", []))),  # Ensure tags are unique
             eventCreatedAt=datetime.now()
@@ -137,7 +137,7 @@ def extract_info_withLLM(text):
             reminderDatetime="",
             location=[],
             isReminder=False,
-            isQuestion=False,
+            isQuery=False,
             category="General",
             tags=tags
         )

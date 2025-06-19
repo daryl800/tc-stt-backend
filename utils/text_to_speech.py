@@ -2,6 +2,7 @@ import sys
 import os
 import base64
 import shutil
+import re
 
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common import credential
@@ -55,3 +56,34 @@ def tencent_tts(text):
         print(f"❌ Error: {str(e)}")
         if "PkgExhausted" in str(e):
             print("Solution: Purchase ")
+
+
+
+
+def clean_text(text):
+    # Remove control characters except \n
+    return re.sub(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]", "", text)
+
+def group_segments_by_limit(segments, max_chars=200):
+    chunks = []
+    current_chunk = ""
+
+    for seg in segments:
+        seg = clean_text(seg)
+        if len(current_chunk) + len(seg) <= max_chars:
+            current_chunk += seg
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            if len(seg) > max_chars:
+                # Force-split long segments
+                for i in range(0, len(seg), max_chars):
+                    chunks.append(seg[i:i+max_chars])
+                current_chunk = ""
+            else:
+                current_chunk = seg
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
