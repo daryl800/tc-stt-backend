@@ -14,7 +14,7 @@ from utils.llm_utils import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 from utils.query_memory import search_past_events  # assuming you placed the function here
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
-from utils.comm_utils import reply_to_FE, enqueue_audio
+from utils.comm_utils import reply_to_FE, enqueue_audio, pick_filler
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -36,7 +36,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # In process_message:
             # transcription = await transcribe_base64_webm_to_text(payload) 
             # print(f"📥 transcription from voice : {transcription}")
-
+            filler_audio = tencent_tts(pick_filler())
+            await reply_to_FE(websocket, 'audio', filler_audio)
             print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
             audio_bytes = base64.b64decode(payload)
             wav_path = await webm_bytes_to_wav_path(audio_bytes)
