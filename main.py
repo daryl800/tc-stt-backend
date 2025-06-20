@@ -10,11 +10,11 @@ from pydub import AudioSegment
 from dateutil import parser
 from fastapi import WebSocket
 from utils.text_to_speech import tencent_tts, group_segments_by_limit
-from utils.transcription import transcribe_base64_webm_to_text
 from utils.llm_utils import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 from utils.query_memory import search_past_events  # assuming you placed the function here
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
+from utils.comm_utils import reply_to_FE, enqueue_audio
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -28,33 +28,6 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
-
-async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
-    await websocket.send_json({
-        "type":  msg_type,
-        "payload": payload
-    })
-
-
-audio_queue = asyncio.Queue()
-sending_task = None
-
-async def enqueue_audio(websocket: WebSocket, base64_wav: str):
-    global sending_task
-    await audio_queue.put((websocket, base64_wav))
-
-    if sending_task is None or sending_task.done():
-        sending_task = asyncio.create_task(audio_sending_loop())
-
-async def audio_sending_loop():
-    while not audio_queue.empty():
-        websocket, base64_audio = await audio_queue.get()
-        try:
-            await reply_to_FE(websocket, 'audio', base64_audio)
-            await asyncio.sleep(0.3)  # To avoid overlap
-        except Exception as e:
-            print(f"[ERROR] Failed to send audio: {e}")
-        audio_queue.task_done()
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
@@ -82,9 +55,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             })
             print(f"📥 Error transcripting!")
             return
-
-        # response_tts_wav = base64.b64encode(tencent_tts("✅ 收到你头先講嘅嘢，我而家會幫你處理，麻烦您比少少耐性 ...")).decode()
-        # await reply_to_FE(websocket, 'audio', response_tts_wav)
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
         tts_task = asyncio.to_thread(tencent_tts, transcription)
@@ -165,7 +135,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     combined.export(buf, format="wav")
                     accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
                     
-                    # Send all audio sequentially with acknowledgments
                     await enqueue_audio(websocket, accumulated_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
@@ -184,13 +153,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             reflection_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
             await enqueue_audio(websocket, reflection_tts_wav)
 
-        # if is_query:
-        #     # Simulate search taking 30s — provide insight first
-        #     asyncio.create_task(provide_insight_then_result(websocket, transcription))
-        # else:
-        #     # response_tts_wav = base64.b64encode(tencent_tts("✅ 你头先话 " + transcription + ", 我已经帮你记低左啦!")).decode() 
-        #     response_tts_wav = base64.b64encode(tencent_tts(reflection)).decode() 
-        #     await reply_to_FE(websocket, 'audio', response_tts_wav)
 
     except Exception as e:
         await websocket.send_json({
