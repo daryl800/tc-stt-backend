@@ -36,6 +36,26 @@ async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
     })
 
 
+audio_queue = asyncio.Queue()
+sending_task = None
+
+async def enqueue_audio(websocket: WebSocket, base64_wav: str):
+    global sending_task
+    await audio_queue.put((websocket, base64_wav))
+
+    if sending_task is None or sending_task.done():
+        sending_task = asyncio.create_task(audio_sending_loop())
+
+async def audio_sending_loop():
+    while not audio_queue.empty():
+        websocket, base64_audio = await audio_queue.get()
+        try:
+            await reply_to_FE(websocket, 'audio', base64_audio)
+            await asyncio.sleep(0.3)  # To avoid overlap
+        except Exception as e:
+            print(f"[ERROR] Failed to send audio: {e}")
+        audio_queue.task_done()
+
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
@@ -109,7 +129,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             initial_tts = base64.b64encode(
                 tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + extraction.mainEvent + "嘅嘢")
             ).decode()
-            await reply_to_FE(websocket, 'audio', initial_tts)
+            await enqueue_audio(websocket, base64.b64encode(initial_tts).decode())
 
             try:
                 answer = search_past_events(extraction)  # Assume this returns a list
@@ -142,26 +162,26 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
                     buf = io.BytesIO()
                     combined.export(buf, format="wav")
-                    response_tts_wav = base64.b64encode(buf.getvalue()).decode()
+                    accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
                     
                     # Send all audio sequentially with acknowledgments
-                    await reply_to_FE(websocket, 'audio', response_tts_wav)
+                    await enqueue_audio(websocket, base64.b64encode(accumulated_tts_wav).decode())
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
                     ).decode()
-                    await reply_to_FE(websocket, 'audio', no_match_tts)
+                    await enqueue_audio(websocket, base64.b64encode(no_match_tts).decode())
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
                 error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
-                await reply_to_FE(websocket, 'audio', error_tts)
+                await enqueue_audio(websocket, base64.b64encode(error_tts).decode())
 
         else:
             # Default response for non-query cases
             reflection_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
-            await reply_to_FE(websocket, 'audio', reflection_tts_wav)
+            await enqueue_audio(websocket, base64.b64encode(reflection_tts_wav).decode())
 
         # if is_query:
         #     # Simulate search taking 30s — provide insight first
