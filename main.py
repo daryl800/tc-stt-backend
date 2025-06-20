@@ -57,21 +57,26 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             return
 
         # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
-        tts_task = asyncio.to_thread(tencent_tts, transcription)
+        # tts_task = asyncio.to_thread(tencent_tts, transcription)
         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
         reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
             # Wait for all in parallel
-            tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
-            if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
-                raise ValueError("Empty or invalid TTS audio received.")
+            # tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
+            extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+            # if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
+            #     raise ValueError("Empty or invalid TTS audio received.")
 
-            response_tts_wav = base64.b64encode(tts_bytes).decode()
+            # response_tts_wav = base64.b64encode(tts_bytes).decode()
+            # Start generating TTS concurrently
+            
 
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
-            response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+            # response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+
+        reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
 
         try:
             # Fire-and-forget the DB save (don't await to return faster)
@@ -97,7 +102,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         if is_query:
             # Initial response (always sent first)
             initial_tts = base64.b64encode(
-                tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + ", ".join(extraction.tags) + "嘅嘢!")
+                tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
             ).decode()
             # await enqueue_audio(websocket, initial_tts)
             await reply_to_FE(websocket, 'audio', initial_tts)
@@ -150,7 +155,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
         else:
             # Default response for non-query cases
-            reflection_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
+            # Then wait for the TTS result when ready to send
+            reflection_tts_bytes = await reflection_tts_task
+            reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
             await enqueue_audio(websocket, reflection_tts_wav)
 
 
