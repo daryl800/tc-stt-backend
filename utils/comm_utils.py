@@ -31,7 +31,7 @@ async def audio_sending_loop():
 import random
 
 FILLERS = [
-    "嗯～", "哦～", "收到～", "聽到喇。"
+    "Okay～", "聽到你讲"
 ]
 
 def pick_filler():
