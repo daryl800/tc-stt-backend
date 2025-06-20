@@ -35,20 +35,6 @@ async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
         "payload": payload
     })
 
-async def send_audio_sequentially(websocket, audio_messages):
-    for audio_wav in audio_messages:
-        # Send the audio chunk
-        await reply_to_FE(websocket, 'audio', audio_wav)
-        
-        # Wait for FE to confirm playback is done
-        try:
-            ack = await asyncio.wait_for(websocket.recv(), timeout=30.0)  # Adjust timeout as needed
-            if ack != "playback_done":
-                print("[WARNING] Unexpected playback acknowledgment:", ack)
-                break
-        except asyncio.TimeoutError:
-            print("[ERROR] Timeout waiting for playback confirmation")
-            break
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
@@ -121,9 +107,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         if is_query:
             # Initial response (always sent first)
             initial_tts = base64.b64encode(
-                tencent_tts("咁樣你要俾啲耐性我，我而家幫你搵吓你之前有冇講過呢啲嘢啦！")
+                tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + extraction.mainEvent + "嘅嘢")
             ).decode()
-            await send_audio_sequentially(websocket, [initial_tts])
+            await reply_to_FE(websocket, 'audio', initial_tts)
 
             try:
                 answer = search_past_events(extraction)  # Assume this returns a list
@@ -159,12 +145,12 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     response_tts_wav = base64.b64encode(buf.getvalue()).decode()
                     
                     # Send all audio sequentially with acknowledgments
-                    await send_audio_sequentially(websocket, [response_tts_wav])
+                    await reply_to_FE(websocket, 'audio', response_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
                     ).decode()
-                    await send_audio_sequentially(websocket, [no_match_tts])
+                    await reply_to_FE(websocket, 'audio', no_match_tts)
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
@@ -174,8 +160,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
         else:
             # Default response for non-query cases
-            response_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
-            await reply_to_FE(websocket, 'audio', response_tts_wav)
+            reflection_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
+            await reply_to_FE(websocket, 'audio', reflection_tts_wav)
 
         # if is_query:
         #     # Simulate search taking 30s — provide insight first
