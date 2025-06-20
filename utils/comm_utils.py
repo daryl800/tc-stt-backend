@@ -26,3 +26,13 @@ async def audio_sending_loop():
         except Exception as e:
             print(f"[ERROR] Failed to send audio: {e}")
         audio_queue.task_done()
+
+
+import random
+
+FILLERS = [
+    "嗯～", "哦～", "收到～", "聽到喇。"
+]
+
+def pick_filler():
+    return random.choice(FILLERS)

@@ -36,7 +36,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # In process_message:
             # transcription = await transcribe_base64_webm_to_text(payload) 
             # print(f"📥 transcription from voice : {transcription}")
-            filler_audio = tencent_tts(pick_filler())
+            filler_audio = base64.b64encode(tencent_tts(pick_filler())).decode()
             await reply_to_FE(websocket, 'audio', filler_audio)
             print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
             audio_bytes = base64.b64decode(payload)
