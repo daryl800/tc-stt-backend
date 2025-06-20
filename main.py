@@ -127,7 +127,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         if is_query:
             # Initial response (always sent first)
             initial_tts = base64.b64encode(
-                tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + extraction.mainEvent + "嘅嘢")
+                tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + extraction.mainEvent)
             ).decode()
             # await enqueue_audio(websocket, initial_tts)
             await reply_to_FE(websocket, 'audio', initial_tts)
