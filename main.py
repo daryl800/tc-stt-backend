@@ -129,7 +129,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             initial_tts = base64.b64encode(
                 tencent_tts("咁你要俾啲耐性我，我而家幫你搵吓你之前有冇提及過关于" + extraction.mainEvent + "嘅嘢")
             ).decode()
-            await enqueue_audio(websocket, base64.b64encode(initial_tts).decode())
+            await enqueue_audio(websocket, initial_tts)
 
             try:
                 answer = search_past_events(extraction)  # Assume this returns a list
@@ -165,23 +165,23 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
                     
                     # Send all audio sequentially with acknowledgments
-                    await enqueue_audio(websocket, base64.b64encode(accumulated_tts_wav).decode())
+                    await enqueue_audio(websocket, accumulated_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
                     ).decode()
-                    await enqueue_audio(websocket, base64.b64encode(no_match_tts).decode())
+                    await enqueue_audio(websocket, no_match_tts)
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
                 error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
-                await enqueue_audio(websocket, base64.b64encode(error_tts).decode())
+                await enqueue_audio(websocket, error_tts)
 
         else:
             # Default response for non-query cases
             reflection_tts_wav = base64.b64encode(tencent_tts(reflection)).decode()
-            await enqueue_audio(websocket, base64.b64encode(reflection_tts_wav).decode())
+            await enqueue_audio(websocket, reflection_tts_wav)
 
         # if is_query:
         #     # Simulate search taking 30s — provide insight first
