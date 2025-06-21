@@ -128,7 +128,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 answer = search_past_events(extraction)  # Assume this returns a list
                 segments = []
 
-                if len(item) > 0:
+                if answer:
                     # Process all items first
                     for item in answer:
                         raw_date = item.get('eventCreatedAt', '')
