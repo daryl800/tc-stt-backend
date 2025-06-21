@@ -57,9 +57,16 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             is_query = (
                 "有冇" in transcription 
                 or "提過" in transcription 
+                or "提过" in transcription
                 or "講過" in transcription 
+                or "讲过" in transcription
                 or "有冇講過" in transcription 
+                or "有冇讲过" in transcription 
+                or "係咪講過" in transcription
+                or "系咪讲过" in transcription 
                 or "有冇提及過" in transcription 
+                or "有冇提及过" in transcription
+                or "提及關於" in transcription
                 or "提及关于" in transcription
             )
 
