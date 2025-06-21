@@ -42,21 +42,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
-            # In process_message:
-            # transcription = await transcribe_base64_webm_to_text(payload) 
-            # print(f"📥 transcription from voice : {transcription}")
-
-            # filler_audio = base64.b64encode(tencent_tts(pick_filler())).decode()
-            # await reply_to_FE(websocket, 'audio', filler_audio)
-            # print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
-            # audio_bytes = base64.b64decode(payload)
-            # wav_path = await webm_bytes_to_wav_path(audio_bytes)
-            # with open(wav_path, "rb") as f:
-            #     wav_bytes = f.read()
-            # transcription = await transcribe_tencent(wav_path)
-            # print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
-            # os.remove(wav_path)
-            # Start filler response and transcription in parallel
             filler_task = asyncio.to_thread(lambda: base64.b64encode(pick_random_filler()).decode())
             transcribe_task = asyncio.create_task(transcribe_workflow(payload))
 
@@ -78,20 +63,11 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"📥 Error transcripting!")
             return
 
-        # Parallelize TTS + LLM using asyncio.to_thread (since all 3 are sync)
-        # tts_task = asyncio.to_thread(tencent_tts, transcription)
         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
         reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
-            # Wait for all in parallel
-            # tts_bytes, extraction, reflection = await asyncio.gather(tts_task, extract_task, reflection_task)
             extraction, reflection = await asyncio.gather(extract_task, reflection_task)
-            # if not tts_bytes or len(tts_bytes) < 100:  # sanity threshold
-            #     raise ValueError("Empty or invalid TTS audio received.")
-
-            # response_tts_wav = base64.b64encode(tts_bytes).decode()
-            # Start generating TTS concurrently
 
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
@@ -145,7 +121,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
                     event = item.get('transcription', '')
                     segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
-
+                segments.append(f"喺咁多～")
                 # Generate and send audio replies sequentially
                 if segments:
                     combined = AudioSegment.empty()
