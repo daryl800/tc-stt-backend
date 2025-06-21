@@ -14,7 +14,7 @@ from utils.llm_utils import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 from utils.query_memory import search_past_events  # assuming you placed the function here
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
-from utils.comm_utils import reply_to_FE, enqueue_audio, pick_filler
+from utils.comm_utils import reply_to_FE, enqueue_audio, pick_filler_audio
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -28,6 +28,14 @@ def generate_reflection_with_timing(transcription):
     print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
     return result
 
+async def transcribe_workflow(base64_audio_str: str):
+    audio_bytes = base64.b64decode(base64_audio_str)
+    wav_path = await webm_bytes_to_wav_path(audio_bytes)
+    with open(wav_path, "rb") as f:
+        wav_bytes = f.read()
+    transcription = await transcribe_tencent(wav_path)
+    os.remove(wav_path)
+    return transcription, wav_bytes
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
@@ -36,16 +44,28 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # In process_message:
             # transcription = await transcribe_base64_webm_to_text(payload) 
             # print(f"📥 transcription from voice : {transcription}")
-            filler_audio = base64.b64encode(tencent_tts(pick_filler())).decode()
+
+            # filler_audio = base64.b64encode(tencent_tts(pick_filler())).decode()
+            # await reply_to_FE(websocket, 'audio', filler_audio)
+            # print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
+            # audio_bytes = base64.b64decode(payload)
+            # wav_path = await webm_bytes_to_wav_path(audio_bytes)
+            # with open(wav_path, "rb") as f:
+            #     wav_bytes = f.read()
+            # transcription = await transcribe_tencent(wav_path)
+            # print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
+            # os.remove(wav_path)
+            # Start filler response and transcription in parallel
+            filler_task = asyncio.to_thread(lambda: base64.b64encode(tencent_tts(pick_filler_audio())).decode())
+            transcribe_task = asyncio.create_task(transcribe_workflow(payload))
+
+            # Send filler audio as soon as ready
+            filler_audio = await filler_task
             await reply_to_FE(websocket, 'audio', filler_audio)
-            print("[INFO - transcribe_base64_webm_to_text: ] Converting webm to wav...")
-            audio_bytes = base64.b64decode(payload)
-            wav_path = await webm_bytes_to_wav_path(audio_bytes)
-            with open(wav_path, "rb") as f:
-                wav_bytes = f.read()
-            transcription = await transcribe_tencent(wav_path)
-            print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
-            os.remove(wav_path)
+
+            # Get transcription and wav bytes
+            transcription, wav_bytes = await transcribe_task
+            print(f"[INFO] Transcription result: {transcription}")
         elif msg_type == "text":
             transcription = payload.strip()
             print(f"📥 transcription from text: {transcription}")
@@ -71,7 +91,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
             # response_tts_wav = base64.b64encode(tts_bytes).decode()
             # Start generating TTS concurrently
-            
 
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
@@ -85,7 +104,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             asyncio.create_task(
                 save_to_leancloud_async(extraction, wav_bytes)
             )
-
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
