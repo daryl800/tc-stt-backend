@@ -173,7 +173,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                         await enqueue_audio(websocket, accumulated_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
-                        tencent_tts("你之前好似冇提过关于" + extraction.tags + "嘅嘢。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
+                        tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) + "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
                     ).decode()
                     await enqueue_audio(websocket, no_match_tts)
 
