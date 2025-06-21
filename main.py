@@ -83,11 +83,16 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"📥 Error transcripting!")
             return
 
-        extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
+        # extract_task = await asyncio.to_thread(extract_info_with_timing, transcription)
+        extraction = await asyncio.to_thread(extract_info_with_timing, transcription)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.tags)
 
         try:
-            extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+            # Run reflection + other async ops if needed in parallel
+            # extraction, reflection = await asyncio.gather(extract_task, reflection_task)
+            reflection = await reflection_task
+            reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
+        
 
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
