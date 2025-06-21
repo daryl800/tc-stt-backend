@@ -122,7 +122,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
                     event = item.get('transcription', '')
                     segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
-                segments.append(f"喺咁多～")
+                segments.append(f"喺咁多啦～")
                 # Generate and send audio replies sequentially
                 if segments:
                     combined = AudioSegment.empty()
