@@ -57,7 +57,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
             # os.remove(wav_path)
             # Start filler response and transcription in parallel
-            filler_task = asyncio.to_thread(lambda: base64.b64encode(tencent_tts(pick_random_filler())).decode())
+            filler_task = asyncio.to_thread(lambda: base64.b64encode(pick_random_filler()).decode())
             transcribe_task = asyncio.create_task(transcribe_workflow(payload))
 
             # Send filler audio as soon as ready
