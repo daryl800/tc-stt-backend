@@ -1,5 +1,5 @@
 import os
-from init import init_filler_messages
+from config.init import init_filler_messages
 
 TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID_CN")
 TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY_CN")
