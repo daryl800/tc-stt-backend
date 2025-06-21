@@ -7,6 +7,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from config.init import init_leancloud
 from fastapi import WebSocket, WebSocketDisconnect
 from routes.ws_routes import router as ws_router
+from config.filler import init_filler_messages
+
+app = FastAPI()
 
 # ✅ Init LeanCloud first
 init_leancloud()
@@ -17,8 +20,6 @@ def initialize_filler_cache():
 
 # ✅ Import routers
 from routes.transcribe_routes import router as transcribe_router
-
-app = FastAPI()
 
 # ✅ CORS
 app.add_middleware(
