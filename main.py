@@ -92,7 +92,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
         # extract_task = await asyncio.to_thread(extract_info_with_timing, transcription)
         extraction = await asyncio.to_thread(extract_info_with_timing, transcription)
-        reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.tags)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.mainEvent)
 
         try:
             # Run reflection + other async ops if needed in parallel
