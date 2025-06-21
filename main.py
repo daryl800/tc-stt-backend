@@ -52,6 +52,26 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # Get transcription and wav bytes
             transcription, wav_bytes = await transcribe_task
             print(f"[INFO] Transcription result: {transcription}")
+
+            # --- Step C: Determine if it's a query (about memory)
+            is_query = (
+                "有冇" in transcription 
+                or "提過" in transcription 
+                or "講過" in transcription 
+                or "有冇講過" in transcription 
+                or "有冇提及過" in transcription 
+                or "提及关于" in transcription
+            )
+
+            if is_query:
+                # Initial response (always sent first)
+                initial_tts = base64.b64encode(
+                    # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
+                    tencent_tts("等一阵，我揾揾")
+                ).decode()
+                # await enqueue_audio(websocket, initial_tts)
+                await reply_to_FE(websocket, 'audio', initial_tts)
+
         elif msg_type == "text":
             transcription = payload.strip()
             print(f"📥 transcription from text: {transcription}")
@@ -85,24 +105,24 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
 
-        # --- Step C: Determine if it's a query (about memory)
-        is_query = (
-            "有冇" in transcription 
-            or "提過" in transcription 
-            or "講過" in transcription 
-            or "有冇講過" in transcription 
-            or "有冇提及過" in transcription 
-            or "提及关于" in transcription
-        )
+        # # --- Step C: Determine if it's a query (about memory)
+        # is_query = (
+        #     "有冇" in transcription 
+        #     or "提過" in transcription 
+        #     or "講過" in transcription 
+        #     or "有冇講過" in transcription 
+        #     or "有冇提及過" in transcription 
+        #     or "提及关于" in transcription
+        # )
 
         if is_query:
-            # Initial response (always sent first)
-            initial_tts = base64.b64encode(
-                # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
-                tencent_tts("等一阵，我揾揾")
-            ).decode()
-            # await enqueue_audio(websocket, initial_tts)
-            await reply_to_FE(websocket, 'audio', initial_tts)
+            # # Initial response (always sent first)
+            # initial_tts = base64.b64encode(
+            #     # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
+            #     tencent_tts("等一阵，我揾揾")
+            # ).decode()
+            # # await enqueue_audio(websocket, initial_tts)
+            # await reply_to_FE(websocket, 'audio', initial_tts)
 
             try:
                 answer = search_past_events(extraction)  # Assume this returns a list
