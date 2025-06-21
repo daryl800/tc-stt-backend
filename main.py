@@ -60,10 +60,15 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 or "提过" in transcription
                 or "講過" in transcription 
                 or "讲过" in transcription
+                or "談過" in transcription
+                or "談及過" in transcription
+                or "談過關於" in transcription 
                 or "有冇講過" in transcription 
                 or "有冇讲过" in transcription 
                 or "係咪講過" in transcription
                 or "系咪讲过" in transcription 
+                or "有冇提過" in transcription 
+                or "有冇提过" in transcription
                 or "有冇提及過" in transcription 
                 or "有冇提及过" in transcription
                 or "提及關於" in transcription
