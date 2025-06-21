@@ -4,12 +4,15 @@ from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from config.leancloud_init import init_leancloud
+from config.init import init_leancloud, init_filler_messages
 from fastapi import WebSocket, WebSocketDisconnect
 from routes.ws_routes import router as ws_router
 
 # ✅ Init LeanCloud first
 init_leancloud()
+
+# ✅ Init Filler Messages
+init_filler_messages()
 
 # ✅ Import routers
 from routes.transcribe_routes import router as transcribe_router
