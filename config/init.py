@@ -1,5 +1,5 @@
 import leancloud
-from config.constants import LEANCLOUD_APP_ID, LEANCLOUD_APP_KEY, FILLERS
+from config.constants import LEANCLOUD_APP_ID, LEANCLOUD_APP_KEY
 from utils.text_to_speech import tencent_tts
 
 def init_filler_messages(fillers):
