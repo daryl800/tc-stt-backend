@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from config.init import init_leancloud
 from fastapi import WebSocket, WebSocketDisconnect
 from routes.ws_routes import router as ws_router
-from config.filler import init_filler_messages
+from utils.filler_utils import init_filler_messages
 
 app = FastAPI()
 
