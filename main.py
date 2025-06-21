@@ -128,36 +128,37 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 answer = search_past_events(extraction)  # Assume this returns a list
                 segments = []
 
-                # Process all items first
-                for item in answer:
-                    raw_date = item.get('eventCreatedAt', '')
-                    try:
-                        if isinstance(raw_date, datetime):
-                            dt = raw_date
-                        else:
-                            dt = parser.isoparse(raw_date)
-                        formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                    except Exception as e:
-                        formatted_date = str(raw_date)
+                if len(item) > 0:
+                    # Process all items first
+                    for item in answer:
+                        raw_date = item.get('eventCreatedAt', '')
+                        try:
+                            if isinstance(raw_date, datetime):
+                                dt = raw_date
+                            else:
+                                dt = parser.isoparse(raw_date)
+                            formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+                        except Exception as e:
+                            formatted_date = str(raw_date)
 
-                    event = item.get('transcription', '')
-                    segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
-                segments.append(f"喺咁多啦～")
-                # Generate and send audio replies sequentially
-                if segments:
-                    combined = AudioSegment.empty()
-                    tts_chunks = group_segments_by_limit(segments)
-                    
-                    for chunk in tts_chunks:
-                        tts_audio_bytes = tencent_tts(chunk)
-                        audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        combined += audio_segment
+                        event = item.get('transcription', '')
+                        segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
+                    segments.append(f"喺咁多啦～")
+                    # Generate and send audio replies sequentially
+                    if segments:
+                        combined = AudioSegment.empty()
+                        tts_chunks = group_segments_by_limit(segments)
+                        
+                        for chunk in tts_chunks:
+                            tts_audio_bytes = tencent_tts(chunk)
+                            audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+                            combined += audio_segment
 
-                    buf = io.BytesIO()
-                    combined.export(buf, format="wav")
-                    accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
-                    
-                    await enqueue_audio(websocket, accumulated_tts_wav)
+                        buf = io.BytesIO()
+                        combined.export(buf, format="wav")
+                        accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
+                        
+                        await enqueue_audio(websocket, accumulated_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于呢啲内容。不过，我揾到以下的资料，你可以参考下。" + reflection)
@@ -169,14 +170,12 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 traceback.print_exc()
                 error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
                 await enqueue_audio(websocket, error_tts)
-
         else:
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
             reflection_tts_bytes = await reflection_tts_task
             reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
             await enqueue_audio(websocket, reflection_tts_wav)
-
 
     except Exception as e:
         await websocket.send_json({
