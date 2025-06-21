@@ -1,8 +1,6 @@
-import base64
+
 import asyncio
 from fastapi import WebSocket
-import random
-from config.constants import FILLER_CACHE,FILLER_LIST
 
 async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
     await websocket.send_json({
@@ -29,8 +27,3 @@ async def audio_sending_loop():
         except Exception as e:
             print(f"[ERROR] Failed to send audio: {e}")
         audio_queue.task_done()
-
-
-def pick_filler_audio():
-    text = random.choice(FILLER_LIST)
-    return base64.b64encode(FILLER_CACHE[text]).decode()

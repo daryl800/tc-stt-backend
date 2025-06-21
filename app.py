@@ -7,13 +7,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from config.init import init_leancloud, init_filler_messages
 from fastapi import WebSocket, WebSocketDisconnect
 from routes.ws_routes import router as ws_router
-from config.constants import FILLER_LIST
 
 # ✅ Init LeanCloud first
 init_leancloud()
 
-# ✅ Init Filler Messages
-FILLER_CACHE = init_filler_messages(FILLER_LIST)
+@app.on_event("startup")
+def initialize_filler_cache():
+    init_filler_messages()
 
 # ✅ Import routers
 from routes.transcribe_routes import router as transcribe_router

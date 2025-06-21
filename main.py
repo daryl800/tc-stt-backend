@@ -14,7 +14,7 @@ from utils.llm_utils import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 from utils.query_memory import search_past_events  # assuming you placed the function here
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
-from utils.comm_utils import reply_to_FE, enqueue_audio, pick_filler_audio
+from utils.comm_utils import reply_to_FE, enqueue_audio
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -56,7 +56,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # print(f"[INFO - transcribe_base64_webm_to_text: ] transcribed result: {transcription}")
             # os.remove(wav_path)
             # Start filler response and transcription in parallel
-            filler_task = asyncio.to_thread(lambda: base64.b64encode(tencent_tts(pick_filler_audio())).decode())
+            filler_task = asyncio.to_thread(lambda: base64.b64encode(tencent_tts(pick_filler_audio(FILLER_CACHE))).decode())
             transcribe_task = asyncio.create_task(transcribe_workflow(payload))
 
             # Send filler audio as soon as ready

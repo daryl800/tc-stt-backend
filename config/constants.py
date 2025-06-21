@@ -7,4 +7,4 @@ LEANCLOUD_APP_ID = os.getenv("LEANCLOUD_APP_ID")
 LEANCLOUD_APP_KEY = os.getenv("LEANCLOUD_APP_KEY")
 LEANCLOUD_MASTER_KEY = os.getenv("LEANCLOUD_MASTER_KEY")  # optional, for admin operations
 
-FILLER_LIST = ["Okay，收到～", "好呀，聽到你讲～", "收到，明白～"]
+
