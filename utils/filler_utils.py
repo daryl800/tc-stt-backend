@@ -4,9 +4,9 @@ from utils.text_to_speech import tencent_tts
 
 # FILLER_LIST = ["嗯", "好吖", "等陣", "噉我睇吓", "畀啲時間我"]
 FILLER_LIST = [
-    "嗯……Okay，收到～",
-    "噉……好呀，聽到你讲～",
-    "唔……收到，好的～"
+    "唔……Okay，收到～",
+    "er……好呀，聽到你讲～",
+    "唔……好的，收到～"
 ]
 
 FILLER_CACHE = {}
