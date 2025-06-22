@@ -103,7 +103,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         #     reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
 
         extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-        reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.mainEvent)
+        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
 
         try:
             # Run reflection + other async ops if needed in parallel
