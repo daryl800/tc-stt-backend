@@ -175,23 +175,16 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                         combined = AudioSegment.empty()
                         tts_chunks = group_segments_by_limit(segments)
                         
-                        # for chunk in tts_chunks:
-                        #     tts_audio_bytes = tencent_tts(chunk)
-                        #     audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                        #     combined += audio_segment
-
-                        # buf = io.BytesIO()
-                        # combined.export(buf, format="wav")
-                        # accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
-                        
-                        # await enqueue_audio(websocket, accumulated_tts_wav)
-
                         for chunk in tts_chunks:
-                            # 呼叫串流 TTS API，取得音訊片段流
-                            async for audio_segment in tts_streaming_api(chunk):
-                                # 逐段 base64 編碼並送給前端
-                                b64_audio = base64.b64encode(audio_segment).decode()
-                                await enqueue_audio(websocket, b64_audio)
+                            tts_audio_bytes = tencent_tts(chunk)
+                            audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+                            combined += audio_segment
+
+                        buf = io.BytesIO()
+                        combined.export(buf, format="wav")
+                        accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
+                        
+                        await enqueue_audio(websocket, accumulated_tts_wav)
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) + "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
