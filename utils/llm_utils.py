@@ -10,13 +10,26 @@ from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 # Initialize Hunyuan client (singleton pattern)
 _hunyuan_client = None
 
+# def get_hunyuan_client():
+#     global _hunyuan_client
+#     if _hunyuan_client is None:
+#         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+#         http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+#         client_profile = ClientProfile(httpProfile=http_profile)
+#         _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
+#     return _hunyuan_client
+
 def get_hunyuan_client():
     global _hunyuan_client
     if _hunyuan_client is None:
-        cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-        http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-        client_profile = ClientProfile(httpProfile=http_profile)
-        _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-guangzhou", client_profile)
+        try:
+            cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+            http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+            client_profile = ClientProfile(httpProfile=http_profile)
+            _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
+        except Exception as e:
+            print(f"初始化混元客户端失败: {e}")
+            raise  # 或返回 None，根据业务需求处理
     return _hunyuan_client
 
 def extract_info_withLLM(text):
@@ -104,7 +117,7 @@ def extract_info_withLLM(text):
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
         req.Model = "hunyuan-standard"  
-        req.Temperature = 0
+        req.Temperature = 1
 
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())

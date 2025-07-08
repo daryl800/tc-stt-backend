@@ -24,7 +24,7 @@ cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
 
 # Initialize Hunyuan client (singleton pattern)
 def get_tts_client():
-    return tts_client.TtsClient(cred, "ap-guangzhou") 
+    return tts_client.TtsClient(cred, "ap-hongkong") 
 
 def tencent_tts(text):
     # Request setup (CORRECT: Using TextToVoiceRequest)

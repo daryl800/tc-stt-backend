@@ -32,10 +32,10 @@ cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
 
 # Initialize Hunyuan client (singleton pattern)
 def get_asr_client():
-    return  asr_client.AsrClient(cred, "ap-guangzhou")
+    return  asr_client.AsrClient(cred, "ap-hongkong")
 
 def get_tts_client():
-    return tts_client.TtsClient(cred, "ap-guangzhou") 
+    return tts_client.TtsClient(cred, "ap-hongkong") 
 
 
 def convert_webm_to_wav(webm_bytes: bytes) -> bytes:

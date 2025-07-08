@@ -28,7 +28,7 @@ if shutil.which("ffmpeg") is None:
 
 # Initialize Hunyuan client (singleton pattern)
 def get_asr_client():
-    return  asr_client.AsrClient(cred, "ap-guangzhou")
+    return  asr_client.AsrClient(cred, "ap-hongkong")
 
 
 async def webm_bytes_to_wav_path(webm_bytes: bytes) -> str:
