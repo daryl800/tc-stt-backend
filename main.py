@@ -113,8 +113,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             print(f"[ERROR] TTS or extraction failed: {e}")
             # response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
 
-        reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
-
         try:
             # Fire-and-forget the DB save (don't await to return faster)
             print(f"[INFO] Saving extraction to leanCloud: {extraction}")
