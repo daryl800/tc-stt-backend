@@ -60,9 +60,10 @@ def extract_info_withLLM(text):
             - Locations (e.g., 香港)
             - People/entities (e.g., 我個仔, 屋企人)
             - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
+        - "Question": Answer the question correctly
         
-        Question Detection Rules:
-        1. Mark "isQuery": true if the sentence is asking about something, including:
+        Query Detection Rules:
+        1. Mark "isQuery": true if the sentence is asking about if something has happened, including:
             - When/what/where/why/how questions (e.g., 幾時, 乜嘢, 邊度, 點樣)
             - Uncertainty or forgetfulness: phrases like 「有冇」、「記唔記得」、「係唔係」、「我有冇讲过」、「我好似讲过」、「我想问」、「我想知道」、「请问」
             - Indirect/self-reflective questions such as:
@@ -116,8 +117,8 @@ def extract_info_withLLM(text):
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-t1-latest"  
-        req.Temperature = 1
+        req.Model = "hunyuan-standard"
+        req.Temperature = 0.7
 
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
@@ -191,8 +192,8 @@ def generate_reflection(text: str) -> str:
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-t1-latest"
-        req.Temperature = 1
+        req.Model = "hunyuan-standard"
+        req.Temperature = 0.7
 
         resp = client.ChatCompletions(req)
         reflection = resp.Choices[0].Message.Content.strip()
