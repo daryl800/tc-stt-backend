@@ -117,8 +117,8 @@ def extract_info_withLLM(text):
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-turbo"
-        req.Temperature = 1
+        req.Model = "hunyuan-standard"
+        req.Temperature = 0.7
 
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
@@ -192,8 +192,8 @@ def generate_reflection(text: str) -> str:
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-standard"
-        req.Temperature = 0.7
+        req.Model = "hunyuan-turbos-latest"
+        req.Temperature = 1
 
         resp = client.ChatCompletions(req)
         reflection = resp.Choices[0].Message.Content.strip()
