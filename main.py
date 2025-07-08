@@ -141,21 +141,74 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         #     or "提及关于" in transcription
         # )
 
+        # if is_query:
+        #     # # Initial response (always sent first)
+        #     # initial_tts = base64.b64encode(
+        #     #     # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
+        #     #     tencent_tts("等一阵，我揾揾")
+        #     # ).decode()
+        #     # # await enqueue_audio(websocket, initial_tts)
+        #     # await reply_to_FE(websocket, 'audio', initial_tts)
+
+        #     try:
+        #         answer = search_past_events(extraction)  # Assume this returns a list
+        #         segments = []
+
+        #         if answer:
+        #             # Process all items first
+        #             for item in answer:
+        #                 raw_date = item.get('eventCreatedAt', '')
+        #                 try:
+        #                     if isinstance(raw_date, datetime):
+        #                         dt = raw_date
+        #                     else:
+        #                         dt = parser.isoparse(raw_date)
+        #                     formatted_date = dt.strftime("%Y-%m-%d %H:%M")
+        #                 except Exception as e:
+        #                     formatted_date = str(raw_date)
+
+        #                 event = item.get('transcription', '')
+        #                 segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
+        #             segments.append(f"喺咁多啦～")
+        #             # Generate and send audio replies sequentially
+        #             if segments:
+        #                 combined = AudioSegment.empty()
+        #                 tts_chunks = group_segments_by_limit(segments)
+                        
+        #                 for chunk in tts_chunks:
+        #                     tts_audio_bytes = tencent_tts(chunk)
+        #                     audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
+        #                     combined += audio_segment
+
+        #                 buf = io.BytesIO()
+        #                 combined.export(buf, format="wav")
+        #                 accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
+                        
+        #                 await enqueue_audio(websocket, accumulated_tts_wav)
+        #         else:
+        #             no_match_tts = base64.b64encode(
+        #                 tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) + "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
+        #             ).decode()
+        #             await enqueue_audio(websocket, no_match_tts)
+
+        #     except Exception as e:
+        #         print("[ERROR] TTS for question failed:")
+        #         traceback.print_exc()
+        #         error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+        #         await enqueue_audio(websocket, error_tts)
+        # else:
+        #     # Default response for non-query cases
+        #     # Then wait for the TTS result when ready to send
+        #     reflection_tts_bytes = await reflection_tts_task
+        #     reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
+        #     await enqueue_audio(websocket, reflection_tts_wav)
+
         if is_query:
-            # # Initial response (always sent first)
-            # initial_tts = base64.b64encode(
-            #     # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
-            #     tencent_tts("等一阵，我揾揾")
-            # ).decode()
-            # # await enqueue_audio(websocket, initial_tts)
-            # await reply_to_FE(websocket, 'audio', initial_tts)
-
             try:
-                answer = search_past_events(extraction)  # Assume this returns a list
-                segments = []
-
+                answer = search_past_events(extraction)  # 回傳 list
                 if answer:
-                    # Process all items first
+                    # 直接組成一個回應字串
+                    lines = []
                     for item in answer:
                         raw_date = item.get('eventCreatedAt', '')
                         try:
@@ -164,41 +217,28 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                             else:
                                 dt = parser.isoparse(raw_date)
                             formatted_date = dt.strftime("%Y-%m-%d %H:%M")
-                        except Exception as e:
+                        except Exception:
                             formatted_date = str(raw_date)
-
                         event = item.get('transcription', '')
-                        segments.append(f"你曾经系 {formatted_date} 讲过: {event}")
-                    segments.append(f"喺咁多啦～")
-                    # Generate and send audio replies sequentially
-                    if segments:
-                        combined = AudioSegment.empty()
-                        tts_chunks = group_segments_by_limit(segments)
-                        
-                        for chunk in tts_chunks:
-                            tts_audio_bytes = tencent_tts(chunk)
-                            audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
-                            combined += audio_segment
-
-                        buf = io.BytesIO()
-                        combined.export(buf, format="wav")
-                        accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
-                        
-                        await enqueue_audio(websocket, accumulated_tts_wav)
+                        lines.append(f"你曾经系 {formatted_date} 讲过: {event}")
+                    lines.append("喺咁多啦～")
+                    reply_text = "\n".join(lines)
+                    # 直接送去 TTS
+                    tts_bytes = await asyncio.to_thread(tencent_tts, reply_text)
+                    tts_wav = base64.b64encode(tts_bytes).decode()
+                    await enqueue_audio(websocket, tts_wav)
                 else:
-                    no_match_tts = base64.b64encode(
-                        tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) + "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
-                    ).decode()
-                    await enqueue_audio(websocket, no_match_tts)
-
+                    no_match_text = f"你之前好似冇提过关于{', '.join(extraction.tags)}嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。{reflection}"
+                    tts_bytes = await asyncio.to_thread(tencent_tts, no_match_text)
+                    tts_wav = base64.b64encode(tts_bytes).decode()
+                    await enqueue_audio(websocket, tts_wav)
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
                 error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
                 await enqueue_audio(websocket, error_tts)
         else:
-            # Default response for non-query cases
-            # Then wait for the TTS result when ready to send
+            # 非查詢型回應
             reflection_tts_bytes = await reflection_tts_task
             reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
             await enqueue_audio(websocket, reflection_tts_wav)
