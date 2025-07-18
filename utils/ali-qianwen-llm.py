@@ -1,48 +1,13 @@
+import dashscope
 import json
 from datetime import datetime
-from tencentcloud.common import credential
-from tencentcloud.common.profile.http_profile import HttpProfile
-from tencentcloud.common.profile.client_profile import ClientProfile
-from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
 from models.memory_item import MemoryItem
-from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
+from config.constants import ALI_CLOUD_API_KEY
 
-# Initialize Hunyuan client (singleton pattern)
-_hunyuan_client = None
-
-# def get_hunyuan_client():
-#     global _hunyuan_client
-#     if _hunyuan_client is None:
-#         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-#         http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-#         client_profile = ClientProfile(httpProfile=http_profile)
-#         _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
-#     return _hunyuan_client
-
-def get_hunyuan_client():
-    global _hunyuan_client
-    if _hunyuan_client is None:
-        try:
-            cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-            http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-            client_profile = ClientProfile(httpProfile=http_profile)
-            _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
-        except Exception as e:
-            print(f"初始化混元客户端失败: {e}")
-            raise  # 或返回 None，根据业务需求处理
-    return _hunyuan_client
+dashscope.api_key = ALI_CLOUD_API_KEY
 
 def extract_info_withLLM(text):
-    """
-    Final optimized version with:
-    - Proper client initialization
-    - LLM-native date handling
-    - Robust error handling
-    """
     try:
-        # Initialize client (thread-safe)
-        client = get_hunyuan_client()
-        
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
         
@@ -115,14 +80,16 @@ def extract_info_withLLM(text):
         }}
         """
 
-        req = models.ChatCompletionsRequest()
-        req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-standard"
-        req.Temperature = 0.7
+        # DashScope新版建議用messages格式，和OpenAI GPT相容
+        messages = [{"role": "user", "content": prompt}]
+        response = dashscope.Generation.call(
+            model="qwen-turbo",     # 或 "qwen-max" "qwen-plus" 視方案選擇
+            messages=messages,
+            temperature=0.7,
+        )
 
-        resp = client.ChatCompletions(req)
-        data = json.loads(resp.Choices[0].Message.Content.strip())
-
+        # 官方回應格式
+        data = json.loads(response.output.text.strip())
         print(f"[INFO] data: {data}")
 
         memoryItem = MemoryItem(
@@ -132,13 +99,12 @@ def extract_info_withLLM(text):
             reminderDatetime=data.get("reminderDatetime", ""),
             isReminder=data.get("isReminder", False),
             isQuery=data.get("isQuery", False),
-            location=list(set(data.get("location", []))),   
-            tags=list(set(data.get("tags", []))),  # Ensure tags are unique
+            location=list(set(data.get("location", []))),
+            tags=list(set(data.get("tags", []))),
             eventCreatedAt=datetime.now()
         )
 
         print(f"[INFO] memoryItem: {memoryItem}")
-        
         return memoryItem
 
     except Exception as e:
@@ -156,7 +122,6 @@ def extract_info_withLLM(text):
             tags=tags
         )
 
-
 # Example test
 if __name__ == "__main__":
     result = extract_info_withLLM("星期三提醒我睇无线电视新闻")
@@ -173,8 +138,6 @@ def generate_reflection(text: str) -> str:
     and memory-oriented. It also adds light特色資訊 to enhance usefulness.
     """
     try:
-        client = get_hunyuan_client()
-
         prompt = f"""
         你係一個有記憶力、貼心、識講廣東話的助理。根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
 
@@ -190,14 +153,13 @@ def generate_reflection(text: str) -> str:
         請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
         """
 
-        req = models.ChatCompletionsRequest()
-        req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-turbos-latest"
-        req.Temperature = 1
-
-        resp = client.ChatCompletions(req)
-        reflection = resp.Choices[0].Message.Content.strip()
-
+        messages = [{"role": "user", "content": prompt}]
+        response = dashscope.Generation.call(
+            model="qwen-turbo",   # 也可以用 "qwen-plus", "qwen-max" 等
+            messages=messages,
+            temperature=1,
+        )
+        reflection = response.output.text.strip()
         print(f"[INFO] Reflection: {reflection}")
         return reflection
 
