@@ -10,7 +10,7 @@ from pydub import AudioSegment
 from dateutil import parser
 from fastapi import WebSocket
 from utils.text_to_speech import tencent_tts, group_segments_by_limit
-from utils.ali_qianwen_llm import extract_info_withLLM, generate_reflection
+from utils.baidu_wenxin_llm import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 from utils.query_memory import search_past_events  # assuming you placed the function here
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
