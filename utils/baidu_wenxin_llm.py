@@ -150,12 +150,15 @@ def generate_reflection(text: str) -> str:
 
     try:
         res = requests.post(url, headers=headers, data=payload, timeout=30)
+        print("[DEBUG] status_code:", res.status_code)
+        print("[DEBUG] response:", res.text)
         res.raise_for_status()
         reply = res.json()["result"].strip()
         return reply
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
+
 
 # Example usage:
 if __name__ == "__main__":
