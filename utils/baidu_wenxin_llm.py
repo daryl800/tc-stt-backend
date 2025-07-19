@@ -5,7 +5,7 @@ from models.memory_item import MemoryItem
 from config.constants import BAIDU_ACCESS_TOKEN
 
 baidu_accessToken = BAIDU_ACCESS_TOKEN
-MODEL = "ERNIE-4.0-8K"  # 可改为 "ernie-bot"
+MODEL = "ernie-4.5-turbo-vl-32k"  
 
 def extract_info_withLLM(text):
     prompt = f"""
