@@ -78,13 +78,22 @@ def extract_info_withLLM(text):
         }}
         """
 
-    url = f"https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/{MODEL}"
+    messages = [{"role": "user", "content": prompt}]
+
+    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro"  # Updated endpoint
+
+    payload = json.dumps({
+        "messages": messages,
+        "disable_search": False,  # ✅ Enable web search (关键参数)
+        "model": "ernie-4.5-turbo-vl-32k",  # Or "ERNIE-4.0-8K-Preview" for latest
+        "temperature": 0.7
+    })
+
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {BAIDU_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {BAIDU_ACCESS_TOKEN}",
+        "appid": ""  # Optional, can be left empty
     }
-    messages = [{"role": "user", "content": prompt}]
-    payload = json.dumps({"messages": messages, "temperature": 0.7})
 
     try:
         res = requests.post(url, headers=headers, data=payload, timeout=30)
@@ -140,13 +149,22 @@ def generate_reflection(text: str) -> str:
     （必須引用可信來源，拒絕緩存答案）
     """
 
-    url = f"https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/{MODEL}"
+    messages = [{"role": "user", "content": prompt}]
+
+    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro"  # Updated endpoint
+
+    payload = json.dumps({
+        "messages": messages,
+        "disable_search": False,  # ✅ Enable web search (关键参数)
+        "model": "ernie-4.5-turbo-vl-32k",  # Or "ERNIE-4.0-8K-Preview" for latest
+        "temperature": 0.7
+    })
+
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {BAIDU_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {BAIDU_ACCESS_TOKEN}",
+        "appid": ""  # Optional, can be left empty
     }
-    messages = [{"role": "user", "content": prompt}]
-    payload = json.dumps({"messages": messages, "temperature": 1})
 
     try:
         res = requests.post(url, headers=headers, data=payload, timeout=30)
