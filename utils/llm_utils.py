@@ -188,7 +188,10 @@ def generate_reflection(text: str) -> str:
         「{text}」
 
         請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
-        """
+        【實時檢索要求】  
+         請嚴格根據網絡最新資訊回答：2025年7月的美國現任總統是誰？  
+        （必須引用可信來源，拒絕緩存答案） 
+        """   
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
