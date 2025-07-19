@@ -158,7 +158,7 @@ def generate_reflection(text: str) -> str:
 
         messages = [{"role": "user", "content": prompt}]
         response = dashscope.Generation.call(
-            model="qwen-turbo",   # 也可以用 "qwen-plus", "qwen-max" 等
+            model="qwen-max",   # 也可以用 "qwen-plus", "qwen-max" 等
             messages=messages,
             temperature=1,
         )
