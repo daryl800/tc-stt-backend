@@ -53,7 +53,6 @@ def weekday_chinese_to_number(day: str) -> int:
             return val
     return 1  # Default to Monday if not found
 
-
 def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None) -> datetime:
     """
     Calculate next occurrence of a Chinese weekday
@@ -63,34 +62,40 @@ def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = Non
     """
     base_date = base_date or datetime.now()
     
-    # Check for "下個" or "下" prefix (meaning next week)
-    is_next_week = "下個" in day_chinese or "下" in day_chinese
-    clean_day = day_chinese.replace("下個", "").replace("下", "").strip()
+    # Handle "下個", "下下個" prefixes
+    if "下下個" in day_chinese or "下下个" in day_chinese:
+        weeks_ahead = 2
+        clean_day = day_chinese.replace("下下個", "").replace("下下个", "")
+    elif "下個" in day_chinese or "下个" in day_chinese:
+        weeks_ahead = 1
+        clean_day = day_chinese.replace("下個", "").replace("下个", "")
+    else:
+        weeks_ahead = 0
+        clean_day = day_chinese
+    
+    clean_day = clean_day.replace("下", "")  # Remove standalone "下" if exists
     
     target_weekday = weekday_chinese_to_number(clean_day)
     current_weekday = base_date.isoweekday()
     
     # Calculate days until next occurrence
     days_until_next = (target_weekday - current_weekday) % 7
-    if days_until_next == 0 and not is_next_week:
-        days_until_next = 7  # If same weekday and not "next week", move to next week
+    if days_until_next == 0 and weeks_ahead == 0:
+        days_until_next = 7  # Move to next week if same day and not specifically asking for next week
     
-    # Add 7 more days if "next week" specified
-    if is_next_week:
-        days_until_next = days_until_next + 7 if days_until_next > 0 else 7
-    
-    result_date = (base_date + timedelta(days=days_until_next)).replace(hour=9, minute=0)
-    return result_date
+    total_days = days_until_next + (7 * weeks_ahead)
+    return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
 
 def generate_time_examples() -> str:
-    """Generate accurate calculation examples"""
+    """Generate accurate calculation examples for the prompt"""
     now = datetime.now()
     examples = [
-        f'"星期一" → {calculate_next_weekday("星期一").strftime("%m-%d")} (Next Monday)',
-        f'"下星期一" → {calculate_next_weekday("星期一", weeks_ahead=1).strftime("%m-%d")} (Monday next week)',
-        f'"下個星期三" → {calculate_next_weekday("星期三", weeks_ahead=1).strftime("%m-%d")}',
-        f'"今個星期五" → {calculate_next_weekday("星期五", weeks_ahead=0).strftime("%m-%d")}',
-        f'"聽日" → {(now + timedelta(days=1)).strftime("%m-%d")}'
+        f'"星期四" → {calculate_next_weekday("星期四").strftime("%Y-%m-%d")}',
+        f'"下個星期四" → {calculate_next_weekday("下個星期四").strftime("%Y-%m-%d")}',
+        f'"下下個星期四" → {calculate_next_weekday("下下個星期四").strftime("%Y-%m-%d")}',
+        f'"今個星期五" → {calculate_next_weekday("星期五").strftime("%Y-%m-%d")} (this week)',
+        f'"聽日" → {(now + timedelta(days=1)).strftime("%Y-%m-%d")}',
+        f'"後日" → {(now + timedelta(days=2)).strftime("%Y-%m-%d")}'
     ]
     return "\n   - ".join(examples)
 
@@ -101,13 +106,20 @@ def extract_info_withLLM(text: str) -> MemoryItem:
         
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-        [Calculated Examples]:
+        [Example Calculations]:
            - {generate_time_examples()}
 
         Extract from Cantonese:
         "{text}"
 
+        Rules:
+        - "下個[weekday]" = next week's weekday
+        - "下下個[weekday]" = weekday in two weeks
+        - "[weekday]" = next occurrence
+
         Output JSON with:
+        - "reminderDatetime": ISO format or ""
+        - "mainEvent": Short summary
         - "category": [General, Family, Health, Shopping, Reminder, Question]
         - "mainEvent": Short summary
         - "reminderDatetime": ISO 8601 or ""
