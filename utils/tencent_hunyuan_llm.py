@@ -38,6 +38,8 @@ import json
 from typing import Optional
 
 # Date Calculation Helpers
+from datetime import datetime, timedelta
+
 def weekday_chinese_to_number(day: str) -> int:
     """Convert Chinese weekday to number (Monday=1)"""
     mapping = {
@@ -55,32 +57,34 @@ def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = Non
     """
     Calculate next occurrence of a Chinese weekday
     Args:
-        day_chinese: e.g. "星期三"
+        day_chinese: e.g. "星期一"
         base_date: Reference date (default: now)
-        weeks_ahead: 0=this week, 1=next week, etc.
+        weeks_ahead: 0=nearest, 1=next week, etc.
     """
     base_date = base_date or datetime.now()
     target_weekday = weekday_chinese_to_number(day_chinese)
+    current_weekday = base_date.isoweekday()
     
-    # Days until next occurrence
-    days_ahead = (target_weekday - base_date.isoweekday()) % 7
-    days_ahead = 7 if days_ahead == 0 else days_ahead  # Handle same-day case
+    # Calculate days until next occurrence
+    days_diff = (target_weekday - current_weekday) % 7
+    if days_diff == 0:  # If same weekday
+        days_diff = 7  # Move to next week
     
-    # Add weeks if needed
-    total_days = days_ahead + (7 * weeks_ahead)
+    # Add additional weeks if specified
+    total_days = days_diff + (7 * weeks_ahead)
     
-    return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
+    result_date = (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
+    return result_date
 
 def generate_time_examples() -> str:
-    """Generate real-time calculation examples for the prompt"""
+    """Generate accurate calculation examples"""
     now = datetime.now()
     examples = [
-        f'"星期三" → {calculate_next_weekday("星期三").strftime("%Y-%m-%dT%H:%M")}',
-        f'"下個星期五" → {calculate_next_weekday("星期五", weeks_ahead=1).strftime("%Y-%m-%dT%H:%M")}',
-        f'"下下個星期一" → {calculate_next_weekday("星期一", weeks_ahead=2).strftime("%Y-%m-%dT%H:%M")}',
-        f'"今個星期日" → {calculate_next_weekday("星期日", weeks_ahead=0).strftime("%Y-%m-%dT%H:%M")}',
-        f'"聽日" → {(now + timedelta(days=1)).replace(hour=9, minute=0).strftime("%Y-%m-%dT%H:%M")}',
-        f'"後日" → {(now + timedelta(days=2)).replace(hour=9, minute=0).strftime("%Y-%m-%dT%H:%M")}'
+        f'"星期一" → {calculate_next_weekday("星期一").strftime("%m-%d")} (Next Monday)',
+        f'"下星期一" → {calculate_next_weekday("星期一", weeks_ahead=1).strftime("%m-%d")} (Monday next week)',
+        f'"下個星期三" → {calculate_next_weekday("星期三", weeks_ahead=1).strftime("%m-%d")}',
+        f'"今個星期五" → {calculate_next_weekday("星期五", weeks_ahead=0).strftime("%m-%d")}',
+        f'"聽日" → {(now + timedelta(days=1)).strftime("%m-%d")}'
     ]
     return "\n   - ".join(examples)
 
