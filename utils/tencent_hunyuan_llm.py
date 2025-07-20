@@ -58,7 +58,7 @@ def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = Non
     """
     Calculate next occurrence of a Chinese weekday with time handling
     Args:
-        day_chinese: e.g. "星期三" or "下個星期三"
+        day_chinese: e.g. "星期六" or "下個星期六"
         base_date: Reference date (default: now)
     """
     base_date = base_date or datetime.now()
@@ -79,13 +79,14 @@ def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = Non
     target_weekday = weekday_chinese_to_number(clean_day)
     current_weekday = base_date.isoweekday()
     
-    # Calculate days until next occurrence
-    days_until_next = (target_weekday - current_weekday) % 7
-    if days_until_next == 0 and weeks_ahead == 0:
-        days_until_next = 7  # Move to next week if same day
+    # Calculate days until next occurrence (FIXED LOGIC)
+    days_until_same_week = (target_weekday - current_weekday) % 7
+    if days_until_same_week == 0 and weeks_ahead == 0:
+        days_until_next = 7  # Same day, move to next week
+    else:
+        days_until_next = days_until_same_week + (7 * weeks_ahead)
     
-    total_days = days_until_next + (7 * weeks_ahead)
-    return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)  # Default to 09:00
+    return (base_date + timedelta(days=days_until_next)).replace(hour=9, minute=0)
 
 def generate_time_examples() -> str:
     """Generate accurate calculation examples for the prompt"""
