@@ -96,7 +96,7 @@ def extract_info_withLLM(text):
         Example:
         - If today is Monday, and text says “提醒我星期三”，then return this week's Wednesday.
         - If today is Friday and text says “提醒我星期三”，then return next week's Wednesday (as this week’s Wednesday is already past).
-
+        - If text says “提醒我下个星期三”，then return next week's Wednesday 
         → Always calculate the next valid date from today to avoid reminders set in the past.
 
         Tagging rules:
