@@ -53,27 +53,33 @@ def weekday_chinese_to_number(day: str) -> int:
             return val
     return 1  # Default to Monday if not found
 
-def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None, weeks_ahead: int = 0) -> datetime:
+
+def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None) -> datetime:
     """
     Calculate next occurrence of a Chinese weekday
     Args:
-        day_chinese: e.g. "星期一"
+        day_chinese: e.g. "星期四" or "下個星期四"
         base_date: Reference date (default: now)
-        weeks_ahead: 0=nearest, 1=next week, etc.
     """
     base_date = base_date or datetime.now()
-    target_weekday = weekday_chinese_to_number(day_chinese)
+    
+    # Check for "下個" or "下" prefix (meaning next week)
+    is_next_week = "下個" in day_chinese or "下" in day_chinese
+    clean_day = day_chinese.replace("下個", "").replace("下", "").strip()
+    
+    target_weekday = weekday_chinese_to_number(clean_day)
     current_weekday = base_date.isoweekday()
     
     # Calculate days until next occurrence
-    days_diff = (target_weekday - current_weekday) % 7
-    if days_diff == 0:  # If same weekday
-        days_diff = 7  # Move to next week
+    days_until_next = (target_weekday - current_weekday) % 7
+    if days_until_next == 0 and not is_next_week:
+        days_until_next = 7  # If same weekday and not "next week", move to next week
     
-    # Add additional weeks if specified
-    total_days = days_diff + (7 * weeks_ahead)
+    # Add 7 more days if "next week" specified
+    if is_next_week:
+        days_until_next = days_until_next + 7 if days_until_next > 0 else 7
     
-    result_date = (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
+    result_date = (base_date + timedelta(days=days_until_next)).replace(hour=9, minute=0)
     return result_date
 
 def generate_time_examples() -> str:
