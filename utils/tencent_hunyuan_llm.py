@@ -74,7 +74,8 @@ def extract_info_withLLM(text):
 
         Time Handling Rules:
         1. Cantonese weekdays:
-        - 「星期三」 means this week's Wednesday.
+        - 「星期日」 means the first day of a week.
+        - 「星期三」 means this week's Wednesday (the 4th day of the week).
         - 「下星期三」 means next week's Wednesday (7 days after the coming Wednesday).
         - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
 
