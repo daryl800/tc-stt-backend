@@ -85,7 +85,7 @@ def extract_info_withLLM(text):
     payload = json.dumps({
         "messages": messages,
         "disable_search": False,  # ✅ Enable web search (关键参数)
-        "model": "ernie-4.5-turbo-vl-32k",  # Or "ERNIE-4.0-8K-Preview" for latest
+        "model": MODEL,  # Or "ERNIE-4.0-8K-Preview" for latest
         "temperature": 0.7
     })
 
@@ -156,7 +156,7 @@ def generate_reflection(text: str) -> str:
     payload = json.dumps({
         "messages": messages,
         "disable_search": False,  # ✅ Enable web search (关键参数)
-        "model": "ernie-4.5-turbo-vl-32k",  # Or "ERNIE-4.0-8K-Preview" for latest
+        "model": MODEL,  # Or "ERNIE-4.0-8K-Preview" for latest
         "temperature": 0.7
     })
 
