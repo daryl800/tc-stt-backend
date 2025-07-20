@@ -33,95 +33,99 @@ def get_hunyuan_client():
     return _hunyuan_client
 
 # You would need to implement these helper functions:
-def calculate_next_occurrence(weekday_chinese):
-    # Convert Chinese weekday to number and calculate next occurrence
-    pass
+from datetime import datetime, timedelta
+import json
+from typing import Optional
 
-def calculate_this_week(weekday_chinese):
-    # Calculate date for this week's occurrence
-    pass
+# Date Calculation Helpers
+def weekday_chinese_to_number(day: str) -> int:
+    """Convert Chinese weekday to number (Monday=1)"""
+    mapping = {
+        '一': 1, '二': 2, '三': 3, '四': 4,
+        '五': 5, '六': 6, '日': 7, '天': 7,
+        '礼拜一': 1, '礼拜二': 2, '礼拜三': 3, '礼拜四': 4,
+        '礼拜五': 5, '礼拜六': 6, '礼拜日': 7, '礼拜天': 7
+    }
+    for key, val in mapping.items():
+        if key in day:
+            return val
+    return 1  # Default to Monday if not found
+
+def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None, weeks_ahead: int = 0) -> datetime:
+    """
+    Calculate next occurrence of a Chinese weekday
+    Args:
+        day_chinese: e.g. "星期三"
+        base_date: Reference date (default: now)
+        weeks_ahead: 0=this week, 1=next week, etc.
+    """
+    base_date = base_date or datetime.now()
+    target_weekday = weekday_chinese_to_number(day_chinese)
     
-def extract_info_withLLM(text):
-    """
-    Final optimized version with:
-    - Proper client initialization
-    - LLM-native date handling
-    - Robust error handling
-    """
+    # Days until next occurrence
+    days_ahead = (target_weekday - base_date.isoweekday()) % 7
+    days_ahead = 7 if days_ahead == 0 else days_ahead  # Handle same-day case
+    
+    # Add weeks if needed
+    total_days = days_ahead + (7 * weeks_ahead)
+    
+    return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
+
+def generate_time_examples() -> str:
+    """Generate real-time calculation examples for the prompt"""
+    now = datetime.now()
+    examples = [
+        f'"星期三" → {calculate_next_weekday("星期三").strftime("%Y-%m-%dT%H:%M")}',
+        f'"下個星期五" → {calculate_next_weekday("星期五", weeks_ahead=1).strftime("%Y-%m-%dT%H:%M")}',
+        f'"下下個星期一" → {calculate_next_weekday("星期一", weeks_ahead=2).strftime("%Y-%m-%dT%H:%M")}',
+        f'"今個星期日" → {calculate_next_weekday("星期日", weeks_ahead=0).strftime("%Y-%m-%dT%H:%M")}',
+        f'"聽日" → {(now + timedelta(days=1)).replace(hour=9, minute=0).strftime("%Y-%m-%dT%H:%M")}',
+        f'"後日" → {(now + timedelta(days=2)).replace(hour=9, minute=0).strftime("%Y-%m-%dT%H:%M")}'
+    ]
+    return "\n   - ".join(examples)
+
+# Main Extraction Function
+def extract_info_withLLM(text: str) -> MemoryItem:
     try:
-        # Initialize client (thread-safe)
         client = get_hunyuan_client()
         
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+        [Calculated Examples]:
+           - {generate_time_examples()}
 
         Extract from Cantonese:
         "{text}"
 
-        Please output ONLY a JSON object with the following fields:
-        - "category": Classify the memory into one of these categories: [General, Family, Health, Shopping, Reminder, Question]
-        - "mainEvent": Short action/plan summary (omit reminder words)
-        - "reminderDatetime": in strict ISO 8601 format: "YYYY-MM-DDTHH:MM" (e.g., "2025-06-12T14:00") or empty string ("") if unclear.
-        - "location": List of places mentioned (e.g., 香港, 瑞典)
-        - "isReminder": true if it includes 提我/提醒我
-        - "isQuery": true if the sentence asks about something, even indirectly (see below)
-        - "tags": List of keywords including:
-            - Locations (e.g., 香港)
-            - People/entities (e.g., 我個仔, 屋企人)
-            - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
-        - "Question": Answer the question correctly
+        Output JSON with:
+        - "category": [General, Family, Health, Shopping, Reminder, Question]
+        - "mainEvent": Short summary
+        - "reminderDatetime": ISO 8601 or ""
+        - "location": List of places
+        - "isReminder": true if contains 提我/提醒我
+        - "isQuery": true if asking something
+        - "tags": Relevant keywords
+        - "Question": Direct answer if question
 
-        Time Handling Rules (IMPORTANT UPDATES):
-        1. Weekday references (星期一/二/三/四/五/六/日):
-        - 「今個[weekday]」/「呢個[weekday]」 = This week's [weekday]
-        - 「下個[weekday]」/「下[weekday]」 = Next week's [weekday] (7 days after this week's)
-        - 「[weekday]」 (no modifier) = The next occurring [weekday] from today
-            - If today is Tuesday and text says "星期三" → Tomorrow
-            - If today is Friday and text says "星期三" → 5 days from now
-        - 「下下個[weekday]」 = [weekday] in two weeks
-
-        2. Calculation Algorithm:
-        For any weekday reference:
-        1. Find today's weekday number (Monday=1 to Sunday=7)
-        2. Find target weekday number from text
-        3. Calculate days_to_add:
-            - If target > current: days_to_add = target - current
-            - If target <= current: days_to_add = 7 - (current - target)
-        4. Apply modifiers:
-            - "下個" → Add 7 more days
-            - "下下個" → Add 14 more days
-        5. NEVER return dates in the past
-
-        3. Examples (Today: {datetime.now().strftime('%Y-%m-%d (%A)')}):
-        - "星期三" → {calculate_next_occurrence('星期三')}
-        - "下個星期五" → {calculate_next_occurrence('星期五') + timedelta(days=7)}
-        - "下下個星期一" → {calculate_next_occurrence('星期一') + timedelta(days=14)}
-        - "今個星期日" → {calculate_this_week('星期日')}
-
-        4. Special Cases:
-        - "聽日" = tomorrow at 09:00
-        - "後日" = 2 days from now at 09:00
-        - "大後日" = 3 days from now at 09:00
-        - "禮拜日" = same as "星期日"
-        - "禮拜三" = same as "星期三"
-    
-        5. Explicit time handling:
-        - Exact times (e.g., "下午三點") → Convert to 24-hour format ("15:00")
-        - Vague times (e.g., "聽日") → Use default time
-        - Very vague (e.g., "遲啲") → Empty string
-
-        [Other rules remain the same...]
+        Time Handling Rules:
+        1. Weekday references:
+           - 「今個[weekday]」/「呢個[weekday]」 = This week
+           - 「下個[weekday]」 = Next week (+7 days)
+           - 「[weekday]」 = Next occurrence
+        2. Special cases:
+           - 聽日/後日 = tomorrow/day after at 09:00
+           - 禮拜X = same as X
 
         [OUTPUT FORMAT]
         {{
-        "category": "General",
-        "mainEvent": "事件描述",
-        "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
-        "location": ["地點"],
-        "isReminder": true/false,
-        "isQuery": true/false,
-        "tags": ["香港", "我個仔", "出年", "旅行"],
-        "Question": ""
+            "category": "General",
+            "mainEvent": "事件描述",
+            "reminderDatetime": "YYYY-MM-DDTHH:MM" or "",
+            "location": ["地點"],
+            "isReminder": true/false,
+            "isQuery": true/false,
+            "tags": ["關鍵詞"],
+            "Question": ""
         }}
         """
 
@@ -133,48 +137,40 @@ def extract_info_withLLM(text):
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
 
-        print(f"[INFO] data: {data}")
-
-        memoryItem = MemoryItem(
+        return MemoryItem(
             category=data.get("category", "General"),
             transcription=text,
             mainEvent=data.get("mainEvent", ""),
             reminderDatetime=data.get("reminderDatetime", ""),
             isReminder=data.get("isReminder", False),
             isQuery=data.get("isQuery", False),
-            location=list(set(data.get("location", []))),   
-            tags=list(set(data.get("tags", []))),  # Ensure tags are unique
+            location=list(set(data.get("location", []))),
+            tags=list(set(data.get("tags", []))),
             eventCreatedAt=datetime.now()
         )
 
-        print(f"[INFO] memoryItem: {memoryItem}")
-        
-        return memoryItem
-
     except Exception as e:
-        print(f"[ERROR] Exception during LLM extraction: {e}")
-        tags = [] if isinstance(e, json.JSONDecodeError) else [f"Error: {str(e)}"]
+        print(f"[ERROR] LLM extraction failed: {e}")
         return MemoryItem(
             eventCreatedAt=datetime.now(),
             transcription=text,
-            mainEvent="",
-            reminderDatetime="",
-            location=[],
-            isReminder=False,
-            isQuery=False,
             category="General",
-            tags=tags
+            tags=[f"Error: {str(e)}"] if not isinstance(e, json.JSONDecodeError) else []
         )
 
-
-# Example test
+# Test Cases
 if __name__ == "__main__":
-    result = extract_info_withLLM("星期三提醒我睇无线电视新闻")
-    print(result.json(indent=4))
-# Example test
-if __name__ == "__main__":
-    print(extract_info_withLLM("星期三提醒我睇无线电视新闻"))
-
+    test_cases = [
+        "提醒我下個星期二去醫院覆診",
+        "今個星期四約牙醫洗牙",
+        "記住聽日交電費",
+        "我係唔係已經約咗下個月驗身？"
+    ]
+    
+    for text in test_cases:
+        print(f"\nInput: {text}")
+        result = extract_info_withLLM(text)
+        print(f"Result: {result}")
 
 def generate_reflection(text: str) -> str:
     """
