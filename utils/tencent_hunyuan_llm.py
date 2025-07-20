@@ -33,14 +33,17 @@ def get_hunyuan_client():
     return _hunyuan_client
 
 # You would need to implement these helper functions:
-from datetime import datetime, timedelta
-import json
-from typing import Optional
+
 
 # Date Calculation Helpers
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta
+from typing import Optional
+import re
+import json
 
-# Date Calculation Helpers (single definition)
+
+# Enhanced Date Calculation Functions
 def weekday_chinese_to_number(day: str) -> int:
     """Convert Chinese weekday to number (Monday=1)"""
     mapping = {
@@ -53,8 +56,6 @@ def weekday_chinese_to_number(day: str) -> int:
         if key in day:
             return val
     return 1  # Default to Monday if not found
-
-from datetime import datetime, timedelta
 
 def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None) -> datetime:
     """
@@ -78,79 +79,75 @@ def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = Non
     
     clean_day = clean_day.replace("下", "").strip()
     
-    # Calculate target weekday (1=Monday, 7=Sunday)
-    target_weekday = {
-        '一': 1, '二': 2, '三': 3, '四': 4,
-        '五': 5, '六': 6, '日': 7, '天': 7
-    }.get(clean_day[-1], 6)  # Default to Saturday if unknown
+    target_weekday = weekday_chinese_to_number(clean_day)
+    current_weekday = base_date.isoweekday()
     
     # Calculate days until target
-    days_until = (target_weekday - base_date.isoweekday()) % 7
+    days_until = (target_weekday - current_weekday) % 7
     if days_until == 0 and weeks_ahead == 0:
         days_until = 7  # Move to next week if same day
     
     total_days = days_until + (7 * weeks_ahead)
     return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
 
-# Test Cases
-def test_calculations():
-    test_date = datetime(2025, 7, 21)  # Monday July 21
-    assert calculate_next_weekday("星期六", test_date).strftime("%Y-%m-%d") == "2025-07-26"
-    assert calculate_next_weekday("下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-02"
-    assert calculate_next_weekday("下下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-09"
-    print("All tests passed!")
-
-test_calculations()
-
-def generate_time_examples() -> str:
-    """Generate accurate calculation examples for the prompt"""
-    now = datetime.now()
-    examples = [
-        f'"星期三" → {calculate_next_weekday("星期三").strftime("%Y-%m-%dT%H:%M")}',
-        f'"下個星期四" → {calculate_next_weekday("下個星期四").strftime("%Y-%m-%dT%H:%M")}',
-        f'"聽日" → {(now + timedelta(days=1)).replace(hour=9, minute=0).strftime("%Y-%m-%dT%H:%M")}'
+def detect_date_from_text(text: str) -> Optional[datetime]:
+    """Enhanced date detection with explicit pattern matching"""
+    patterns = [
+        (r'(下下个|下下個)(星期.|禮拜.)', lambda m: calculate_next_weekday(f"下下个{m.group(2)}")),
+        (r'(下个|下個)(星期.|禮拜.)', lambda m: calculate_next_weekday(f"下个{m.group(2)}")),
+        (r'(今个|今個|呢个|呢個)(星期.|禮拜.)', lambda m: calculate_next_weekday(m.group(2))),
+        (r'(星期.|禮拜.)', lambda m: calculate_next_weekday(m.group(1))),
+        (r'听日|聽日', lambda _: (datetime.now() + timedelta(days=1)).replace(hour=9, minute=0)),
+        (r'後日', lambda _: (datetime.now() + timedelta(days=2)).replace(hour=9, minute=0)),
+        (r'大後日', lambda _: (datetime.now() + timedelta(days=3)).replace(hour=9, minute=0))
     ]
-    return "\n   - ".join(examples)
+    
+    for pattern, calculator in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return calculator(match)
+    return None
 
 # Main Extraction Function
 def extract_info_withLLM(text: str) -> MemoryItem:
     try:
+        # First try deterministic date extraction
+        detected_date = detect_date_from_text(text)
+        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
+        
         client = get_hunyuan_client()
         
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-        [Example Calculations]:
-           - {generate_time_examples()}
-
+        [Detected Date] {date_str if date_str else "None"}
+        
         Extract from Cantonese:
         "{text}"
-
+        
         Rules:
-        - "下個[weekday]" = next week's weekday
-        - "下下個[weekday]" = weekday in two weeks
-        - "[weekday]" = next occurrence
-
+        1. DATE MUST BE IN ISO FORMAT: YYYY-MM-DDTHH:MM
+        2. Use this date if detected: {date_str}
+        3. Time defaults:
+           - Morning/上午 → 09:00
+           - Afternoon/下午 → 14:00
+           - Evening/晚上 → 20:00
+           - No time specified → 09:00
+        
+        Calculation Examples (Today: {datetime.now().strftime('%Y-%m-%d')}):
+        - "下个星期六" → {calculate_next_weekday("下个星期六").strftime('%Y-%m-%dT%H:%M')}
+        - "今个星期三" → {calculate_next_weekday("星期三").strftime('%Y-%m-%dT%H:%M')}
+        - "听日" → {(datetime.now() + timedelta(days=1)).replace(hour=9, minute=0).strftime('%Y-%m-%dT%H:%M')}
+        
         Output JSON with:
         - "reminderDatetime": ISO format or ""
         - "mainEvent": Short summary
         - "category": [General, Family, Health, Shopping, Reminder, Question]
-        - "mainEvent": Short summary
-        - "reminderDatetime": ISO 8601 or ""
         - "location": List of places
         - "isReminder": true if contains 提我/提醒我
         - "isQuery": true if asking something
         - "tags": Relevant keywords
         - "Question": Direct answer if question
-
-        Time Handling Rules:
-        1. Weekday references:
-           - 「今個[weekday]」/「呢個[weekday]」 = This week
-           - 「下個[weekday]」 = Next week (+7 days)
-           - 「[weekday]」 = Next occurrence
-        2. Special cases:
-           - 聽日/後日 = tomorrow/day after at 09:00
-           - 禮拜X = same as X
-
+        
         [OUTPUT FORMAT]
         {{
             "category": "General",
@@ -172,11 +169,14 @@ def extract_info_withLLM(text: str) -> MemoryItem:
         resp = client.ChatCompletions(req)
         data = json.loads(resp.Choices[0].Message.Content.strip())
 
+        # Ensure date consistency
+        final_date = data.get("reminderDatetime", date_str if date_str else "")
+        
         return MemoryItem(
             category=data.get("category", "General"),
             transcription=text,
             mainEvent=data.get("mainEvent", ""),
-            reminderDatetime=data.get("reminderDatetime", ""),
+            reminderDatetime=final_date,
             isReminder=data.get("isReminder", False),
             isQuery=data.get("isQuery", False),
             location=list(set(data.get("location", []))),
@@ -195,17 +195,28 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
 # Test Cases
 if __name__ == "__main__":
+    # Verification Tests
+    test_date = datetime(2025, 7, 21)  # Monday July 21, 2025
+    assert calculate_next_weekday("星期六", test_date).strftime("%Y-%m-%d") == "2025-07-26"
+    assert calculate_next_weekday("下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-02"
+    assert calculate_next_weekday("下下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-09"
+    print("All date calculation tests passed!")
+    
+    # Integration Tests
     test_cases = [
-        "提醒我下個星期二去醫院覆診",
-        "今個星期四約牙醫洗牙",
-        "記住聽日交電費",
-        "我係唔係已經約咗下個月驗身？"
+        ("提醒我呢个星期六Nora会去中山", "2025-07-26"),
+        ("记住提我下个星期六Nora会翻落香港", "2025-08-02"),
+        ("下下个星期六开会", "2025-08-09"),
+        ("听日下午三点开会", ""),  # Exact time should be preserved
+        ("後日早上十点体检", "")
     ]
     
-    for text in test_cases:
-        print(f"\nInput: {text}")
+    for text, expected_date in test_cases:
+        print(f"\nTesting: {text}")
         result = extract_info_withLLM(text)
-        print(f"Result: {result}")
+        if expected_date:
+            assert expected_date in result.reminderDatetime
+        print(f"Result: {result.reminderDatetime} | {result.mainEvent}")
 
 def generate_reflection(text: str) -> str:
     """
