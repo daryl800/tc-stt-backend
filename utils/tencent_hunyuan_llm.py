@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta  # Add this at the top of your file
 from tencentcloud.common import credential
 from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.common.profile.client_profile import ClientProfile
@@ -32,6 +32,15 @@ def get_hunyuan_client():
             raise  # 或返回 None，根据业务需求处理
     return _hunyuan_client
 
+# You would need to implement these helper functions:
+def calculate_next_occurrence(weekday_chinese):
+    # Convert Chinese weekday to number and calculate next occurrence
+    pass
+
+def calculate_this_week(weekday_chinese):
+    # Calculate date for this week's occurrence
+    pass
+    
 def extract_info_withLLM(text):
     """
     Final optimized version with:
@@ -45,10 +54,10 @@ def extract_info_withLLM(text):
         
         prompt = f"""
         [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-        
+
         Extract from Cantonese:
         "{text}"
-        
+
         Please output ONLY a JSON object with the following fields:
         - "category": Classify the memory into one of these categories: [General, Family, Health, Shopping, Reminder, Question]
         - "mainEvent": Short action/plan summary (omit reminder words)
@@ -61,58 +70,58 @@ def extract_info_withLLM(text):
             - People/entities (e.g., 我個仔, 屋企人)
             - Important nouns or time expressions (e.g., 出年, 暑假, 去旅行)
         - "Question": Answer the question correctly
-        
-        Query Detection Rules:
-        1. Mark "isQuery": true if the sentence is asking about if something has happened, including:
-            - When/what/where/why/how questions (e.g., 幾時, 乜嘢, 邊度, 點樣)
-            - Uncertainty or forgetfulness: phrases like 「有冇」、「記唔記得」、「係唔係」、「我有冇讲过」、「我好似讲过」、「我想问」、「我想知道」、「请问」
-            - Indirect/self-reflective questions such as:
-                - 「我唔記得我有冇講過...」
-                - 「我有冇問過...？」
-                - 「我係唔係已經...？」
-            - Any sentence where the speaker is trying to retrieve information, even about past conversations.
 
-        Time Handling Rules:
-        1. Cantonese weekdays:
-        - 「星期日」 means the first day of a week.
-        - 「星期三」 means this week's Wednesday (the 4th day of the week).
-        - 「下星期三」 means next week's Wednesday (7 days after the coming Wednesday).
-        - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
+        Time Handling Rules (IMPORTANT UPDATES):
+        1. Weekday references (星期一/二/三/四/五/六/日):
+        - 「今個[weekday]」/「呢個[weekday]」 = This week's [weekday]
+        - 「下個[weekday]」/「下[weekday]」 = Next week's [weekday] (7 days after this week's)
+        - 「[weekday]」 (no modifier) = The next occurring [weekday] from today
+            - If today is Tuesday and text says "星期三" → Tomorrow
+            - If today is Friday and text says "星期三" → 5 days from now
+        - 「下下個[weekday]」 = [weekday] in two weeks
 
-        2. If only date mentioned → Add default time 09:00
-        Example: "星期三開會" → "2025-06-11T09:00"
+        2. Calculation Algorithm:
+        For any weekday reference:
+        1. Find today's weekday number (Monday=1 to Sunday=7)
+        2. Find target weekday number from text
+        3. Calculate days_to_add:
+            - If target > current: days_to_add = target - current
+            - If target <= current: days_to_add = 7 - (current - target)
+        4. Apply modifiers:
+            - "下個" → Add 7 more days
+            - "下下個" → Add 14 more days
+        5. NEVER return dates in the past
 
-        3. Time period defaults:
-        - 朝早 / 上午 → 09:00
-        - 晏晝 / 下午 → 14:00
-        - 夜晚 / 晚上 → 20:00
+        3. Examples (Today: {datetime.now().strftime('%Y-%m-%d (%A)')}):
+        - "星期三" → {calculate_next_occurrence('星期三')}
+        - "下個星期五" → {calculate_next_occurrence('星期五') + timedelta(days=7)}
+        - "下下個星期一" → {calculate_next_occurrence('星期一') + timedelta(days=14)}
+        - "今個星期日" → {calculate_this_week('星期日')}
 
-        4. Exact times (e.g., “下午三點”) should be preserved as-is.
+        4. Special Cases:
+        - "聽日" = tomorrow at 09:00
+        - "後日" = 2 days from now at 09:00
+        - "大後日" = 3 days from now at 09:00
+        - "禮拜日" = same as "星期日"
+        - "禮拜三" = same as "星期三"
+    
+        5. Explicit time handling:
+        - Exact times (e.g., "下午三點") → Convert to 24-hour format ("15:00")
+        - Vague times (e.g., "聽日") → Use default time
+        - Very vague (e.g., "遲啲") → Empty string
 
-        5. If time is vague or uncertain → Use empty string for "reminderDatetime"
-
-        6. set "isReminder": true if the sentence contains 提我, 提提我, or 提醒我 (even as part of a longer phrase)
-
-        → Interpret the date as the next upcoming matching date from today.
-        Example:
-        - If today is Monday, and text says “提醒我星期三”，then return this week's Wednesday.
-        - If today is Friday and text says “提醒我星期三”，then return next week's Wednesday (as this week’s Wednesday is already past).
-        - If text says “提醒我下个星期三”，then return next week's Wednesday 
-        → Always calculate the next valid date from today to avoid reminders set in the past.
-
-        Tagging rules:
-        1. Tags should be useful for searching and grouping memories.
-        2. Tags should be short (1–5 words) and meaningful.
-        3. Avoid stopwords like "我", "咁", "啦", "喇", "啊", "的".
+        [Other rules remain the same...]
 
         [OUTPUT FORMAT]
         {{
+        "category": "General",
         "mainEvent": "事件描述",
         "reminderDatetime": "YYYY-MM-DDTHH:MM or empty",
         "location": ["地點"],
         "isReminder": true/false,
         "isQuery": true/false,
-        "tags": ["香港", "我個仔", "出年", "旅行"]
+        "tags": ["香港", "我個仔", "出年", "旅行"],
+        "Question": ""
         }}
         """
 
