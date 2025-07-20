@@ -54,9 +54,6 @@ import re
 import json
 from typing import Optional
 
-# Assuming these are your imports (replace with actual imports)
-from your_models import MemoryItem  # Your memory item model
-from your_client import get_hunyuan_client, models  # Your LLM client
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     """
@@ -239,6 +236,7 @@ if __name__ == "__main__":
     print(f"Main event: {memory_item.mainEvent}")
     assert "2025-07-23T12:00" in memory_item.reminderDatetime
     assert "食药" in memory_item.mainEvent
+
 def generate_reflection(text: str) -> str:
     """
     Generate a 20–30 second natural-sounding reflection or follow-up
