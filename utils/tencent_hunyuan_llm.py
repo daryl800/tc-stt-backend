@@ -75,7 +75,7 @@ def extract_info_withLLM(text):
         Time Handling Rules:
         1. Cantonese weekdays:
         - 「星期三」 means this week's Wednesday.
-        - 「下星期三」 means next week's Wednesday (7 days after this week's Wednesday).
+        - 「下星期三」 means next week's Wednesday (7 days after the coming Wednesday).
         - 「出年」、「下個月」、「下星期」 all refer to the **next full period**, not the day after.
 
         2. If only date mentioned → Add default time 09:00
