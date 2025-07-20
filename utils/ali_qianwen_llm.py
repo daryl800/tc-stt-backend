@@ -138,6 +138,7 @@ def generate_reflection(text: str) -> str:
     and memory-oriented. It also adds light特色資訊 to enhance usefulness.
     """
     try:
+        # First, create a prompt that asks Qwen to decide if web search is needed
         prompt = f"""
         你係一個有記憶力、貼心、識講廣東話的助理。根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
 
@@ -153,17 +154,20 @@ def generate_reflection(text: str) -> str:
         請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
         【實時檢索要求】  
         請嚴格根據網絡最新資訊回答：{text}  
-        （必須引用可信來源，拒絕緩存答案） 
+        （必須引用可信來源，拒絕緩存答案）
         """
 
         messages = [{"role": "user", "content": prompt}]
+        
+        # Call the web search model
         response = dashscope.Generation.call(
-            model="qwen-max",   # 也可以用 "qwen-plus", "qwen-max" 等
+            model="qwen-web",   # Use the web search model
             messages=messages,
             temperature=1,
         )
+        
         reflection = response.output.text.strip()
-        print(f"[INFO] Reflection: {reflection}")
+        print(f"[INFO] Reflection with web search: {reflection}")
         return reflection
 
     except Exception as e:
