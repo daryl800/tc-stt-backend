@@ -54,39 +54,53 @@ def weekday_chinese_to_number(day: str) -> int:
             return val
     return 1  # Default to Monday if not found
 
+from datetime import datetime, timedelta
+
 def calculate_next_weekday(day_chinese: str, base_date: Optional[datetime] = None) -> datetime:
     """
-    Calculate next occurrence of a Chinese weekday with time handling
-    Args:
-        day_chinese: e.g. "星期六" or "下個星期六"
-        base_date: Reference date (default: now)
+    Correctly calculates Chinese weekday references
+    - "星期六" = Next Saturday (could be this week)
+    - "下个星期六" = Saturday next week
+    - "下下个星期六" = Saturday in two weeks
     """
     base_date = base_date or datetime.now()
     
-    # Handle time modifiers
-    if "下下個" in day_chinese or "下下个" in day_chinese:
+    # Extract week modifiers
+    if "下下个" in day_chinese or "下下個" in day_chinese:
         weeks_ahead = 2
-        clean_day = day_chinese.replace("下下個", "").replace("下下个", "")
-    elif "下個" in day_chinese or "下个" in day_chinese:
+        clean_day = day_chinese.replace("下下个", "").replace("下下個", "")
+    elif "下个" in day_chinese or "下個" in day_chinese:
         weeks_ahead = 1
-        clean_day = day_chinese.replace("下個", "").replace("下个", "")
+        clean_day = day_chinese.replace("下个", "").replace("下個", "")
     else:
         weeks_ahead = 0
         clean_day = day_chinese
     
     clean_day = clean_day.replace("下", "").strip()
     
-    target_weekday = weekday_chinese_to_number(clean_day)
-    current_weekday = base_date.isoweekday()
+    # Calculate target weekday (1=Monday, 7=Sunday)
+    target_weekday = {
+        '一': 1, '二': 2, '三': 3, '四': 4,
+        '五': 5, '六': 6, '日': 7, '天': 7
+    }.get(clean_day[-1], 6)  # Default to Saturday if unknown
     
-    # Calculate days until next occurrence (FIXED LOGIC)
-    days_until_same_week = (target_weekday - current_weekday) % 7
-    if days_until_same_week == 0 and weeks_ahead == 0:
-        days_until_next = 7  # Same day, move to next week
-    else:
-        days_until_next = days_until_same_week + (7 * weeks_ahead)
+    # Calculate days until target
+    days_until = (target_weekday - base_date.isoweekday()) % 7
+    if days_until == 0 and weeks_ahead == 0:
+        days_until = 7  # Move to next week if same day
     
-    return (base_date + timedelta(days=days_until_next)).replace(hour=9, minute=0)
+    total_days = days_until + (7 * weeks_ahead)
+    return (base_date + timedelta(days=total_days)).replace(hour=9, minute=0)
+
+# Test Cases
+def test_calculations():
+    test_date = datetime(2025, 7, 21)  # Monday July 21
+    assert calculate_next_weekday("星期六", test_date).strftime("%Y-%m-%d") == "2025-07-26"
+    assert calculate_next_weekday("下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-02"
+    assert calculate_next_weekday("下下个星期六", test_date).strftime("%Y-%m-%d") == "2025-08-09"
+    print("All tests passed!")
+
+test_calculations()
 
 def generate_time_examples() -> str:
     """Generate accurate calculation examples for the prompt"""
