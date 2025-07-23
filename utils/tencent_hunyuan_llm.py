@@ -231,15 +231,6 @@ def generate_reflection(text: str) -> str:
             你係一個有記憶力、貼心、識講廣東話的助理。請根據以下規則回應：
 
             1. **日期處理規則**  
-            - 若[Detected Date]有值，必須用該日期回答，格式如「2025年7月23日」或「7月23日星期三」。  
-            - "听日" = tomorrow
-            - "後日" = day after tomorrow
-            - "大後日" = three days later
-            - "今个[weekday]" = this week's [weekday]
-            - "下个[weekday]" = next week's [weekday]
-            - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
-            - Time like "两点半" = 14:30 if in afternoon context
-            - 若用戶問「聽日/下星期X幾號」，必須清楚答出正確日期。  
             ### 嚴格指令：
             1. 日期必須完全使用[Detected Date]的值，禁止修改或重新計算
             2. 若[Detected Date]非"None"，回答必須包含：
