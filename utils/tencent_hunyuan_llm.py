@@ -170,7 +170,8 @@ def extract_info_withLLM(text: str) -> MemoryItem:
         data = json.loads(resp.Choices[0].Message.Content.strip())
 
         # Force deterministic date if available
-        final_date = date_str if date_str else data.get("reminderDatetime", "")
+        final_date = date_str if data.get("isReminder") else ""
+
 
         return MemoryItem(
             category=data.get("category", "General"),
@@ -228,12 +229,14 @@ def generate_reflection(text: str) -> str:
 
         prompt = f"""
         你係一個有記憶力、貼心、識講廣東話的助理。根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
-
         - 重點整理（幫佢重溫重點）
         - 適量反應（如關心、認同、幽默）
         - 有用的生活建議或提醒（如果適用）
         - 不需要加入如：“有冇記錯，你之前話起過”，这类字眼
         - 如果提到地點，請自然地提及當地一個具代表性或最受歡迎的景點或活動，建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
+
+        请记住今日的日期：
+        [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
 
         使用者啱啱講咗：
         「{text}」
