@@ -225,6 +225,10 @@ def generate_reflection(text: str) -> str:
     and memory-oriented. It also adds light特色資訊 to enhance usefulness.
     """
     try:
+
+        detected_date = calculate_cantonese_date(text)
+        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
+
         client = get_hunyuan_client()
 
         prompt = f"""
@@ -235,8 +239,17 @@ def generate_reflection(text: str) -> str:
         - 不需要加入如：“有冇記錯，你之前話起過”，这类字眼
         - 如果提到地點，請自然地提及當地一個具代表性或最受歡迎的景點或活動，建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
 
-        请记住今日的日期：
-        [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+            ## Instructions:
+
+            1. Date/Time Handling
+            - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
+            - "听日" = tomorrow
+            - "後日" = day after tomorrow
+            - "大後日" = three days later
+            - "今个[weekday]" = this week's [weekday]
+            - "下个[weekday]" = next week's [weekday]
+            - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
+            - Time like "两点半" = 14:30 if in afternoon context
 
         使用者啱啱講咗：
         「{text}」
