@@ -80,6 +80,8 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
             days_until = 7  # Always jump to same weekday next week
             if target_weekday != base_date.isoweekday():  # If not today
                 days_until = (target_weekday - base_date.isoweekday()) % 7 + 7
+                print(f"[DEBUG] Adjusted days until for next week: {days_until}")
+                print(f"[DEBUG] Target weekday: {target_weekday}, Base weekday: {base_date.isoweekday()}")
         elif "下下个" in text or "下下個" in text:
             days_until = (target_weekday - base_date.isoweekday()) % 7 + 14
         elif days_until == 0:  # Current week's weekday
@@ -224,7 +226,7 @@ def generate_reflection(text: str) -> str:
 
         # DEBUG PRINT
         print(f"[DEBUG] Input: '{text}' | Calculated Date: {date_str}")
-        
+
         client = get_hunyuan_client()
 
         prompt = f"""
