@@ -46,58 +46,67 @@ import re
 from typing import Optional
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
+    """
+    Correctly calculates dates from Cantonese expressions.
+    Now properly handles "下个星期一" as next week's Monday (not current week).
+    """
     base_date = base_date or datetime.now()
     text = text.replace("礼拜", "星期").replace("聽日", "听日")
 
-    # Week shift calculation
-    if "下下个" in text or "下下個" in text:
-        weeks_ahead = 2
-        clean_day = text.replace("下下个", "").replace("下下個", "")
-    elif "下个" in text or "下個" in text:
-        weeks_ahead = 1
-        clean_day = text.replace("下个", "").replace("下個", "")
-    else:
-        weeks_ahead = 0
-        clean_day = text
+    # Handle relative days
+    if "听日" in text:
+        return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
+    elif "後日" in text or "后日" in text:
+        return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
+    elif "大後日" in text:
+        return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
+    elif "今日" in text or "而家" in text:
+        return base_date.replace(hour=12, minute=0)
 
-    clean_day = clean_day.replace("下", "").strip()
-
-    # Date calculation
-    if "听日" in clean_day:
-        target_date = base_date + timedelta(days=1)
-    elif "後日" in clean_day or "后日" in clean_day:
-        target_date = base_date + timedelta(days=2)
-    elif "大後日" in clean_day:
-        target_date = base_date + timedelta(days=3)
-    else:
-        weekday_match = re.search(r'(星期|禮拜)([一二三四五六七日天])', clean_day)
-        if not weekday_match:
-            return None
-
+    # Handle weekdays
+    weekday_match = re.search(r'(?:星期|禮拜)([一二三四五六七日天])', text)
+    if weekday_match:
         weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
                       '五': 5, '六': 6, '日': 7, '天': 7}
-        target_weekday = weekday_map[weekday_match.group(2)]
+        target_weekday = weekday_map[weekday_match.group(1)]
 
-        # Key Fix: Calculate days to next occurrence
+        # Calculate days until target weekday
         days_until = (target_weekday - base_date.isoweekday()) % 7
-        if days_until == 0:  # Same day
-            days_until = 7 if weeks_ahead > 0 else 0
         
-        # Add full weeks if needed
-        target_date = base_date + timedelta(days=days_until + (7 * weeks_ahead))
+        # Handle "下个" prefix
+        if "下个" in text or "下個" in text:
+            if days_until == 0:  # If same day, go to next week
+                days_until = 7
+            else:  # Otherwise just add 7 days to get to next week
+                days_until += 7
+        elif "下下个" in text or "下下個" in text:
+            days_until += 14  # Two weeks ahead
+        elif days_until == 0:  # Current week's weekday
+            return base_date.replace(hour=12, minute=0)
 
-    # Time parsing (unchanged)
-    hour, minute = 12, 0
-    if any(t in text for t in ["中午", "晏昼", "下午"]):
-        time_match = re.search(r'(\d+)(点|點)(半)?', text)
-        hour = int(time_match.group(1)) if time_match else 14
-        if time_match and hour < 12 and "下午" in text:
-            hour += 12
-        if time_match and time_match.group(3):
-            minute = 30
-    # ... (other time cases)
+        target_date = base_date + timedelta(days=days_until)
+        
+        # Time handling
+        hour, minute = 12, 0  # Default noon
+        if "朝早" in text or "上午" in text:
+            hour = 9
+        elif "晏昼" in text or "下午" in text:
+            hour = 14
+        elif "夜晚" in text or "晚上" in text:
+            hour = 20
+            
+        # Handle specific times like "三点半"
+        time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
+        if time_match:
+            hour = int(time_match.group(1))
+            if "下午" in text and hour < 12:
+                hour += 12
+            if time_match.group(2):
+                minute = 30
+                
+        return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-    return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    return None
 
 
 def extract_info_withLLM(text: str) -> MemoryItem:
@@ -211,6 +220,8 @@ def generate_reflection(text: str) -> str:
         detected_date = calculate_cantonese_date(text)
         date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
 
+        # DEBUG PRINT
+        print(f"[DEBUG] Input: '{text}' | Calculated Date: {date_str}")
         client = get_hunyuan_client()
 
         prompt = f"""
@@ -260,6 +271,7 @@ def generate_reflection(text: str) -> str:
         reflection = resp.Choices[0].Message.Content.strip()
 
         print(f"[INFO] Reflection: {reflection}")
+
         return reflection
 
     except Exception as e:
