@@ -65,6 +65,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
     # Handle weekdays
     weekday_match = re.search(r'(?:星期|禮拜)([一二三四五六七日天])', text)
+    print(f"[DEBUG] Weekday match: {weekday_match.group(1) if weekday_match else 'None'}")
     if weekday_match:
         weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
                       '五': 5, '六': 6, '日': 7, '天': 7}
@@ -72,6 +73,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
         # Calculate days until target weekday
         days_until = (target_weekday - base_date.isoweekday()) % 7
+        print(f"[DEBUG] Days until target weekday: {days_until}")
         
         # Handle "下个" prefix
         if "下个" in text or "下個" in text:
@@ -84,6 +86,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
             return base_date.replace(hour=12, minute=0)
 
         target_date = base_date + timedelta(days=days_until)
+        print(f"[DEBUG] Target date after weekday calculation: {target_date}")
         
         # Time handling
         hour, minute = 12, 0  # Default noon
@@ -221,6 +224,7 @@ def generate_reflection(text: str) -> str:
 
         # DEBUG PRINT
         print(f"[DEBUG] Input: '{text}' | Calculated Date: {date_str}")
+        
         client = get_hunyuan_client()
 
         prompt = f"""
