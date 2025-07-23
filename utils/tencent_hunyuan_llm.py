@@ -41,15 +41,22 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
+from datetime import datetime, timedelta
+import re
+from typing import Optional
+
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     """
-    Calculates a datetime from Cantonese expressions with time handling.
-    Returns a datetime object or None.
+    Correctly calculates dates from Cantonese expressions like:
+    - "听日" (tomorrow)
+    - "下星期一" (next Monday)
+    - "大後日" (3 days later)
+    Handles time expressions like "两点半" (14:30).
     """
     base_date = base_date or datetime.now()
     text = text.replace("礼拜", "星期").replace("聽日", "听日")
 
-    # Determine week shift
+    # --- Week Shift Logic ---
     if "下下个" in text or "下下個" in text:
         weeks_ahead = 2
         clean_day = text.replace("下下个", "").replace("下下個", "")
@@ -62,60 +69,58 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
     clean_day = clean_day.replace("下", "").strip()
 
-    # Check weekday
-    weekday_match = re.search(r'(星期|禮拜)([一二三四五六七日天])', clean_day)
-    if not weekday_match:
-        if "听日" in text:
-            target_date = base_date + timedelta(days=1)
-        elif "後日" in text:
-            target_date = base_date + timedelta(days=2)
-        elif "大後日" in text:
-            target_date = base_date + timedelta(days=3)
-        else:
-            return None
+    # --- Date Calculation ---
+    # Handle relative days
+    if "听日" in clean_day:
+        target_date = base_date + timedelta(days=1)
+    elif "後日" in clean_day or "后日" in clean_day:
+        target_date = base_date + timedelta(days=2)
+    elif "大後日" in clean_day:
+        target_date = base_date + timedelta(days=3)
     else:
-        target_weekday = {
-            '一': 1, '二': 2, '三': 3, '四': 4,
-            '五': 5, '六': 6, '日': 7, '天': 7
-        }.get(weekday_match.group(2), 1)
+        # Handle weekdays
+        weekday_match = re.search(r'(星期|禮拜)([一二三四五六七日天])', clean_day)
+        if not weekday_match:
+            return None  # Not a date query
 
+        # Convert Chinese weekday to number
+        weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
+                      '五': 5, '六': 6, '日': 7, '天': 7}
+        target_weekday = weekday_map.get(weekday_match.group(2), 1)
+
+        # Calculate days until target weekday
         days_until = (target_weekday - base_date.isoweekday()) % 7
         if days_until == 0 and weeks_ahead == 0:
-            days_until = 7  # Move to next week if same day
-        total_days = days_until + (7 * weeks_ahead)
+            days_until = 7  # Same day → next week
+
+        # FIX: Only add full weeks AFTER the next occurrence
+        total_days = days_until + (7 * (weeks_ahead - 1)) if weeks_ahead >= 1 else days_until
         target_date = base_date + timedelta(days=total_days)
 
-    # Time parsing
+    # --- Time Parsing ---
     hour, minute = 12, 0  # Default noon
-    if any(t in text for t in ["中午", "晏昼", "下午"]):
-        time_match = re.search(r'(\d+)(点|點)(半)?', text)
-        if time_match:
-            hour = int(time_match.group(1))
-            if hour < 12:
-                hour += 12
-            if time_match.group(3):
-                minute = 30
-        else:
-            hour = 14
-    elif any(t in text for t in ["朝早", "上午"]):
-        time_match = re.search(r'(\d+)(点|點)(半)?', text)
-        hour = int(time_match.group(1)) if time_match else 9
-        if time_match and time_match.group(3):
-            minute = 30
-    elif any(t in text for t in ["晚上", "夜晚"]):
-        time_match = re.search(r'(\d+)(点|點)(半)?', text)
-        hour = int(time_match.group(1)) if time_match else 20
-        if time_match and time_match.group(3):
-            minute = 30
-    elif re.search(r'(\d+)(点|點)(半)?', text):
-        time_match = re.search(r'(\d+)(点|點)(半)?', text)
+    time_context = {
+        "中午": (12, 0), "晏昼": (14, 0), "下午": (14, 0),
+        "朝早": (9, 0), "上午": (9, 0), 
+        "晚上": (20, 0), "夜晚": (20, 0)
+    }
+
+    # Check for time context keywords
+    for keyword, (h, m) in time_context.items():
+        if keyword in text:
+            hour, minute = h, m
+            break
+
+    # Override with explicit time (e.g., "两点半")
+    time_match = re.search(r'(\d+)(点|點)(半)?', text)
+    if time_match:
         hour = int(time_match.group(1))
         if "下午" in text and hour < 12:
-            hour += 12
-        if time_match.group(3):
+            hour += 12  # Convert to 24-hour format
+        if time_match.group(3):  # "半"
             minute = 30
 
-    return target_date.replace(hour=hour, minute=minute)
+    return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
 def extract_info_withLLM(text: str) -> MemoryItem:
