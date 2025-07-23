@@ -232,17 +232,20 @@ def generate_reflection(text: str) -> str:
         client = get_hunyuan_client()
 
         prompt = f"""
-        你係一個有記憶力、貼心、識講廣東話的助理。根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
-        - 重點整理（幫佢重溫重點）
-        - 適量反應（如關心、認同、幽默）
-        - 有用的生活建議或提醒（如果適用）
-        - 不需要加入如：“有冇記錯，你之前話起過”，这类字眼
-        - 如果提到地點，請自然地提及當地一個具代表性或最受歡迎的景點或活動，建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
+            [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+            [Detected Date] {date_str if date_str else "None"}
+
+            你係一個有記憶力、貼心、識講廣東話的助理。如果使用者唔系问问题，只系想聊天，请根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
+            - 重點整理（幫佢重溫重點）
+            - 適量反應（如關心、認同、幽默）
+            - 有用的生活建議或提醒（如果適用）
+            - 不需要加入如：“有冇記錯，你之前話起過”，这类字眼
+            - 如果提到地點，請自然地提及當地一個具代表性或最受歡迎的景點或活動，建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
 
             ## Instructions:
-
             1. Date/Time Handling
-            - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
+            - [Detected Date] 係根據使用者講嘅內容用日曆邏輯計出嚟，請務必使用呢個日期。唔好自己估或者更改日期，除非使用者內容明顯有衝突。
+            - 如果使用者係問「聽日幾多號」或者「下星期三係幾號」咁，請清楚答出正確嘅日期。
             - "听日" = tomorrow
             - "後日" = day after tomorrow
             - "大後日" = three days later
@@ -251,11 +254,11 @@ def generate_reflection(text: str) -> str:
             - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
             - Time like "两点半" = 14:30 if in afternoon context
 
-        使用者啱啱講咗：
-        「{text}」
+            使用者啱啱講咗：
+            「{text}」
 
-        請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
-        """   
+            請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
+            """   
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
