@@ -218,33 +218,40 @@ if __name__ == "__main__":
     print(f"Main Event: {result.mainEvent}")
 
 
-from datetime import datetime
-
 def generate_reflection(text: str) -> str:
+    """
+    Generate a 20–30 second natural-sounding reflection or follow-up
+    based on what the user just said. The tone is friendly, supportive,
+    and memory-oriented. It also adds light特色資訊 to enhance usefulness.
+    """
     try:
+
         detected_date = calculate_cantonese_date(text)
-        iso_date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
-        pretty_date_str = detected_date.strftime("%Y年%-m月%-d日") if detected_date else ""
+        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
 
         client = get_hunyuan_client()
 
         prompt = f"""
-            你係一個有記憶力、貼心、識講廣東話的助理。如果使用者唔系問問題，只系想聊天，請根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
+            [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+            [Detected Date] {date_str if date_str else "None"}
+
+            你係一個有記憶力、貼心、識講廣東話的助理。如果使用者唔系问问题，只系想聊天，请根據使用者啱啱講嘅內容，用大約20–30秒嘅自然語氣回應一段說話，語氣要自然、口語化、親切，可以加入：
             - 重點整理（幫佢重溫重點）
             - 適量反應（如關心、認同、幽默）
             - 有用的生活建議或提醒（如果適用）
-            - 不需要加入如：“有冇記錯，你之前話起過”，这類字眼
+            - 不需要加入如："有冇記錯，你之前話起過"，这类字眼
             - 如果提到地點，請自然地提及當地一個具代表性或最受歡迎的景點或活動，建議只提一個，唔好列舉，要自然地融合入句子，好似朋友咁分享。
 
-            ## 日期提示：
-            - 今次偵測到嘅日期係：「{pretty_date_str if pretty_date_str else "無偵測到日期"}」
-            - 請務必用呢個日期，如果使用者係問「聽日幾多號」或者「下星期三係幾號」咁，請清楚講出：「{pretty_date_str}」。
+            ## 重要日期處理:
+            - 如果[Detected Date]有值（不是"None"），必須使用該日期回答日期相關問題
+            - 回答時直接顯示日期，不要顯示[Detected Date]這樣的標記
+            - 日期格式示例：2025年7月23日 或 7月23日星期三
 
             使用者啱啱講咗：
             「{text}」
 
             請用純廣東話寫一段自然口語說話，唔好加任何解釋或格式，只要一句完整自然說話即可。
-            """
+    """
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
@@ -260,4 +267,3 @@ def generate_reflection(text: str) -> str:
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
-
