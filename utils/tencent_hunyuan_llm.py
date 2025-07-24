@@ -214,45 +214,44 @@ if __name__ == "__main__":
 
 from datetime import datetime
 
+from datetime import datetime
+from typing import Optional
+
 def generate_reflection(text: str) -> str:
     try:
         client = get_hunyuan_client()
 
-        today = datetime.now()
-        print(f"[DEBUG] Current date: {today}")
-        iso_today = today.strftime("%Y-%m-%d")
-        print(f"[DEBUG] ISO date: {iso_today}") 
-        natural_today = today.strftime("%Y年%-m月%-d日（%A）")
-        print(f"[DEBUG] Natural date: {natural_today}")
+        # Calculate the date from Cantonese text (your own precise logic)
+        detected_date: Optional[datetime] = calculate_cantonese_date(text)
+        if detected_date:
+            detected_date_str = detected_date.strftime("%Y年%-m月%-d日（%A）")
+        else:
+            detected_date_str = "未知日期"
 
+        # Current date in natural format
+        current_date_str = datetime.now().strftime("%Y年%-m月%-d日（%A）")
+
+        # Build prompt including exact date — instruct LLM NOT to change it!
         prompt = f"""
-            [Current ISO Date] {iso_today}
-            [Current Date] {natural_today}
+            [Current Date] {current_date_str}
+            [Detected Date] {detected_date_str}
 
             **日期處理規則**  
-            - 今日 = [Current ISO Date]
-            - "听日" = tomorrow 
-            - "後日" = day after tomorrow 
-            - "大後日" = three days later 
-            - "今个星期/礼拜[weekday]" = this week's [weekday]
-            - "下个星期/礼拜[weekday]" = next week's [weekday] 
-            - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
-            - Time like "两点半" = 14:30 if in afternoon context
-            ### 嚴格指令：
-            1. 回答必須包含：
-            - 格式：「YYYY年M月D日（星期X）」
-            - 示例：「2025年7月28日（星期一）」
-            2. 絕對不可添加或減少天數！
+            - 嚴格使用[Detected Date]作答，禁止修改或重新計算日期
+            - 日期格式：「YYYY年M月D日（星期X）」
+            - 例如：「2025年7月28日（星期一）」
 
-            你係一個有記憶力、貼心、識講廣東話的助理。請根據以下規則回應：
+            你係一個有記憶力、貼心、識講廣東話嘅助理。
+            請根據以下規則回應：
 
-            2. **如果使用者問問題（例如問日期、時間、地點等）** → 直接回答問題，簡潔準確，唔需要加反思或建議。
-            ...
+            1. 如果用戶問日期、時間、地點等問題 → 直接用 [Detected Date] 作答，簡潔準確，唔好加反思。
+            2. 如果用戶只是分享閒聊 → 用20–30秒親切自然嘅語氣回應，可以加重點整理、關心、幽默同小建議。
+            3. 回答時絕對唔可以改變、增加或減少[Detected Date]嘅日期。
+            
+            用戶剛剛講咗：
+            「{text}」
 
-            使用者啱啱講咗：  
-            「{text}」  
-
-            請嚴格按上述規則回應，用純廣東話寫一句自然說話，唔好加任何解釋或格式。  
+            請用純廣東話寫一句自然流暢嘅說話，唔好加任何解釋或格式。
         """
 
         req = models.ChatCompletionsRequest()
