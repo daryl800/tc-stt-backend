@@ -76,7 +76,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
         print(f"[DEBUG] Days until target weekday: {days_until}")
         
         # Handle "下个" prefix
-        if "下个" in text or "下個" in text or "下星期 " in text or "下礼拜" in text or "下禮拜" in text:
+        if "下个" in text or "下個" in text or "下星期" in text or "下礼拜" in text or "下禮拜" in text:
             days_until = 7  # Always jump to same weekday next week
             if target_weekday != base_date.isoweekday():  # If not today
                 days_until = (target_weekday - base_date.isoweekday()) % 7 + 7
