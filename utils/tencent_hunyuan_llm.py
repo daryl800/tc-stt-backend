@@ -221,41 +221,29 @@ def generate_reflection(text: str) -> str:
     """
     try:
 
-        detected_date = calculate_cantonese_date(text)
-        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
-
-        if detected_date:
-            iso_date = detected_date.strftime("%Y-%m-%dT%H:%M")
-            zh_date = detected_date.strftime("%Y年%-m月%-d日（%A）")  # Add weekday in Chinese
-        else:
-            iso_date, zh_date = "None", "None"
-
-
         # DEBUG PRINT
         print(f"[DEBUG] Input: '{text}' | Calculated Date: {date_str}")
 
         client = get_hunyuan_client()
 
         prompt = f"""
-            [Detected Date] ISO: {iso_date}
-            [Detected Date] 中文: {zh_date}
+            [Current Date] {datetime.now().strftime("%Y年%-m月%-d日（%A）")}
 
-            
+
             **日期處理規則**  
             - 今日 = [Current Date]
-            - "听日" = tomorrow （[Current Date] + 1 day）
-            - "後日" = day after tomorrow （[Current Date] + 2 day）
-            - "大後日" = three days later （[Current Date] + 3 day）
+            - "听日" = tomorrow 
+            - "後日" = day after tomorrow 
+            - "大後日" = three days later 
             - "今个星期/礼拜[weekday]" = this week's [weekday]
-            - "下个星期/礼拜[weekday]" = next week's [weekday] （[Current Date] + 7 day）
+            - "下个星期/礼拜[weekday]" = next week's [weekday] 
             - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
             - Time like "两点半" = 14:30 if in afternoon context
             ### 嚴格指令：
-            1. 日期必須完全使用[Detected Date]的值，禁止修改或重新計算
-            2. 若[Detected Date]非"None"，回答必須包含：
+            1. 回答必須包含：
             - 格式：「YYYY年M月D日（星期X）」
             - 示例：「2025年7月28日（星期一）」
-            3. 絕對不可添加或減少天數！
+            2. 絕對不可添加或減少天數！
 
             你係一個有記憶力、貼心、識講廣東話的助理。請根據以下規則回應：
 
