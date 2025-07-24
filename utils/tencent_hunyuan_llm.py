@@ -115,11 +115,11 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
 def extract_info_withLLM(text: str) -> MemoryItem:
     try:
+        client = get_hunyuan_client()
+
         # Deterministic datetime
         detected_date = calculate_cantonese_date(text)
         date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
-
-        client = get_hunyuan_client()
 
         prompt = f"""
             [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
@@ -212,24 +212,25 @@ if __name__ == "__main__":
     print(f"Extracted Date: {result.reminderDatetime}")
     print(f"Main Event: {result.mainEvent}")
 
+from datetime import datetime
 
 def generate_reflection(text: str) -> str:
-    """
-    Generate a 20–30 second natural-sounding reflection or follow-up
-    based on what the user just said. The tone is friendly, supportive,
-    and memory-oriented. It also adds light特色資訊 to enhance usefulness.
-    """
     try:
-
-
-
         client = get_hunyuan_client()
 
+        today = datetime.now()
+        print(f"[DEBUG] Current date: {today}")
+        iso_today = today.strftime("%Y-%m-%d")
+        print(f"[DEBUG] ISO date: {iso_today}") 
+        natural_today = today.strftime("%Y年%-m月%-d日（%A）")
+        print(f"[DEBUG] Natural date: {natural_today}")
+
         prompt = f"""
-            [Current Date] {datetime.now().strftime("%Y年%-m月%-d日（%A）")}
+            [Current ISO Date] {iso_today}
+            [Current Date] {natural_today}
 
             **日期處理規則**  
-            - 今日 = [Current Date]
+            - 今日 = [Current ISO Date]
             - "听日" = tomorrow 
             - "後日" = day after tomorrow 
             - "大後日" = three days later 
@@ -246,17 +247,7 @@ def generate_reflection(text: str) -> str:
             你係一個有記憶力、貼心、識講廣東話的助理。請根據以下規則回應：
 
             2. **如果使用者問問題（例如問日期、時間、地點等）** → 直接回答問題，簡潔準確，唔需要加反思或建議。
-            - 例子：  
-                - 用戶問：「今日幾號？」→ 答：「今日係2025年7月23日，星期三。」  
-                - 用戶問：「聽日天氣點？」→ 答：「聽日預測多雲，有幾陣雨，氣溫26至30度。」  
-
-            3. **如果使用者只係分享或閒聊（冇明確問題）** → 用20–30秒自然語氣回應，語氣親切、口語化，可加入：
-            - 重點整理（幫佢重溫內容）
-            - 適量反應（關心、認同、幽默）
-            - 生活小建議或提醒（如果適用）
-            - 若提到地點，自然地提一個代表性景點/活動（唔好列舉多個）
-            - 例子：  
-                - 用戶講：「今日同朋友去咗飲茶。」→ 答：「同朋友飲茶真係開心！記得你之前都鍾意去陸羽茶室，今次去邊度飲呀？」  
+            ...
 
             使用者啱啱講咗：  
             「{text}」  
@@ -273,7 +264,6 @@ def generate_reflection(text: str) -> str:
         reflection = resp.Choices[0].Message.Content.strip()
 
         print(f"[INFO] Reflection: {reflection}")
-
         return reflection
 
     except Exception as e:
