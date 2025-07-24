@@ -256,7 +256,7 @@ def generate_reflection(text: str) -> str:
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
-        req.Model = "hunyuan-turbos-latest"
+        req.Model = "hunyuan-standard"
         req.Temperature = 1
 
         resp = client.ChatCompletions(req)
