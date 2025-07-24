@@ -80,8 +80,8 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
             days_until = 7  # Always jump to same weekday next week
             if target_weekday != base_date.isoweekday():  # If not today
                 days_until = (target_weekday - base_date.isoweekday()) % 7 + 7
-                print(f"[DEBUG] Adjusted days until for next week: {days_until}")
-                print(f"[DEBUG] Target weekday: {target_weekday}, Base weekday: {base_date.isoweekday()}")
+            print(f"[DEBUG] Adjusted days until for next week: {days_until}")
+            print(f"[DEBUG] Target weekday: {target_weekday}, Base weekday: {base_date.isoweekday()}")
         elif "下下个" in text or "下下個" in text:
             days_until = (target_weekday - base_date.isoweekday()) % 7 + 14
         elif days_until == 0:  # Current week's weekday
@@ -119,7 +119,10 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
         # Deterministic datetime
         detected_date = calculate_cantonese_date(text)
+        print(f"[DEBUG] text: {text}")
+        # Format date as ISO string if available
         date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
+        print(f"[DEBUG] Detected date: {date_str}")
 
         prompt = f"""
             [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
