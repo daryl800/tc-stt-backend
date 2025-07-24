@@ -221,14 +221,12 @@ def generate_reflection(text: str) -> str:
     """
     try:
 
-        # DEBUG PRINT
-        print(f"[DEBUG] Input: '{text}' | Calculated Date: {date_str}")
+
 
         client = get_hunyuan_client()
 
         prompt = f"""
             [Current Date] {datetime.now().strftime("%Y年%-m月%-d日（%A）")}
-
 
             **日期處理規則**  
             - 今日 = [Current Date]
