@@ -71,21 +71,31 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     # Handle weekdays with or without prefix
     weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
                    '五': 5, '六': 6, '日': 7, '天': 7}
-    weekday_full_match = re.search(r'(下下個|下下个|下個|下个)?(?:星期|禮拜)([一二三四五六七日天])', text)
+    # weekday_full_match = re.search(r'(下下個|下下个|下個|下个)?(?:星期|禮拜)([一二三四五六七日天])', text)
+    weekday_full_match = re.search(r'(下下個|下下|下個|下|呢個|今個)?(星期[一二三四五六日天])', text)
+
     if weekday_full_match:
         prefix = weekday_full_match.group(1) or ''
         weekday_char = weekday_full_match.group(2)
         target_weekday = weekday_map[weekday_char]
         base_weekday = base_date.isoweekday()
 
-        delta = (target_weekday - base_weekday) % 7
-        if prefix in ['下下個', '下下个']:
-            days_until = delta + 14 if delta != 0 else 14
-        elif prefix in ['下個', '下个']:
-            days_until = delta + 7 if delta != 0 else 7
+        # Determine week_offset from prefix
+        if prefix in ["呢個", "今個", ""]:
+            week_offset = 0
+        elif prefix in ["下個", "下"]:
+            week_offset = 1
+        elif prefix in ["下下個", "下下"]:
+            week_offset = 2
         else:
-            days_until = delta  # this or upcoming weekday
+            week_offset = 0
 
+        delta = (target_weekday - base_weekday) % 7
+        if delta == 0 and week_offset == 0:
+            days_until = 0
+        else:
+            days_until = delta + week_offset * 7
+        
         target_date = base_date + timedelta(days=days_until)
         print(f"[DEBUG] Calculated weekday: {target_date.date()} from text: {text}")
 
