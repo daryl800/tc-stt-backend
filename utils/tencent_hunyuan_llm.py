@@ -233,10 +233,6 @@ if __name__ == "__main__":
     print(f"Extracted Date: {result.reminderDatetime}")
     print(f"Main Event: {result.mainEvent}")
 
-from datetime import datetime
-
-from datetime import datetime
-from typing import Optional
 
 def generate_reflection(text: str) -> str:
     try:
@@ -266,6 +262,10 @@ def generate_reflection(text: str) -> str:
             【用戶輸入】：
             {text}
             """
+
+        print("[DEBUG] Final prompt sent to model:")
+        print(prompt)
+
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
