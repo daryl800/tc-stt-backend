@@ -45,10 +45,15 @@ from datetime import datetime, timedelta
 import re
 from typing import Optional
 
+from datetime import datetime, timedelta
+from typing import Optional
+import re
+
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     """
     Correctly calculates dates from Cantonese expressions.
-    Now properly handles "下个星期一" as next week's Monday (not current week).
+    Handles "下個星期一" as next week's Monday (not current week),
+    and "下下個星期一" as the week after next.
     """
     base_date = base_date or datetime.now()
     text = text.replace("礼拜", "星期").replace("聽日", "听日")
@@ -63,33 +68,27 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     elif "今日" in text or "而家" in text:
         return base_date.replace(hour=12, minute=0)
 
-    # Handle weekdays
-    weekday_match = re.search(r'(?:星期|禮拜)([一二三四五六七日天])', text)
-    print(f"[DEBUG] Weekday match: {weekday_match.group(1) if weekday_match else 'None'}")
-    if weekday_match:
-        weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
-                      '五': 5, '六': 6, '日': 7, '天': 7}
-        target_weekday = weekday_map[weekday_match.group(1)]
+    # Handle weekdays with or without prefix
+    weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
+                   '五': 5, '六': 6, '日': 7, '天': 7}
+    weekday_full_match = re.search(r'(下下個|下下个|下個|下个)?(?:星期|禮拜)([一二三四五六七日天])', text)
+    if weekday_full_match:
+        prefix = weekday_full_match.group(1) or ''
+        weekday_char = weekday_full_match.group(2)
+        target_weekday = weekday_map[weekday_char]
+        base_weekday = base_date.isoweekday()
 
-        # Calculate days until target weekday
-        days_until = (target_weekday - base_date.isoweekday()) % 7
-        print(f"[DEBUG] Days until target weekday: {days_until}")
-        
-        # Handle "下个" prefix
-        if "下个" in text or "下個" in text or "下星期" in text or "下礼拜" in text or "下禮拜" in text:
-            days_until = 7  # Always jump to same weekday next week
-            if target_weekday != base_date.isoweekday():  # If not today
-                days_until = (target_weekday - base_date.isoweekday()) % 7 + 7
-            print(f"[DEBUG] Adjusted days until for next week: {days_until}")
-            print(f"[DEBUG] Target weekday: {target_weekday}, Base weekday: {base_date.isoweekday()}")
-        elif "下下个" in text or "下下個" in text or "下下星期 " in text or "下下礼拜" in text or "下下禮拜" in text:
-            days_until = (target_weekday - base_date.isoweekday()) % 7 + 14
-        elif days_until == 0:  # Current week's weekday
-            return base_date.replace(hour=12, minute=0)
+        delta = (target_weekday - base_weekday) % 7
+        if prefix in ['下下個', '下下个']:
+            days_until = delta + 14 if delta != 0 else 14
+        elif prefix in ['下個', '下个']:
+            days_until = delta + 7 if delta != 0 else 7
+        else:
+            days_until = delta  # this or upcoming weekday
 
         target_date = base_date + timedelta(days=days_until)
-        print(f"[DEBUG] Target date after weekday calculation: {target_date}")
-        
+        print(f"[DEBUG] Calculated weekday: {target_date.date()} from text: {text}")
+
         # Time handling
         hour, minute = 12, 0  # Default noon
         if "朝早" in text or "上午" in text:
@@ -98,19 +97,20 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
             hour = 14
         elif "夜晚" in text or "晚上" in text:
             hour = 20
-            
+
         # Handle specific times like "三点半"
         time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
         if time_match:
             hour = int(time_match.group(1))
             if "下午" in text and hour < 12:
                 hour += 12
-            if time_match.group(2):
+            if time_match.group(2):  # 半
                 minute = 30
-                
+
         return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     return None
+
 
 
 def extract_info_withLLM(text: str) -> MemoryItem:
