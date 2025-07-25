@@ -49,11 +49,28 @@ from datetime import datetime, timedelta
 from typing import Optional
 import re
 
+import re
+from datetime import datetime, timedelta
+from typing import Optional
+
+WEEKDAY_MAP = {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6, '天': 6}
+
+def get_date_of_next_weekday(target_weekday: int, base_date: datetime) -> datetime:
+    """
+    Returns the date of the target weekday in the *next* week (starting from next Monday).
+    target_weekday: 0 (Mon) to 6 (Sun)
+    """
+    base_weekday = base_date.weekday()
+    days_until_next_monday = (7 - base_weekday) % 7 or 7
+    next_monday = base_date + timedelta(days=days_until_next_monday)
+    return next_monday + timedelta(days=target_weekday)
+
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     """
-    Correctly calculates dates from Cantonese expressions.
-    Handles "下個星期一" as next week's Monday (not current week),
-    and "下下個星期一" as the week after next.
+    Calculates dates from Cantonese expressions like:
+    - 今日, 聽日, 後日
+    - 星期五, 下星期五, 下下星期一
+    Handles correct offsets for week prefixes.
     """
     base_date = base_date or datetime.now()
     text = text.replace("礼拜", "星期").replace("聽日", "听日")
@@ -68,40 +85,32 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     elif "今日" in text or "而家" in text:
         return base_date.replace(hour=12, minute=0)
 
-    # Handle weekdays with or without prefix
-    weekday_map = {'一': 1, '二': 2, '三': 3, '四': 4,
-                   '五': 5, '六': 6, '日': 7, '天': 7}
-    weekday_full_match = re.search(r'(下下個|下下|下個|下|呢個|今個)?(星期[一二三四五六日天])', text)
+    # Match weekday expression
+    weekday_match = re.search(r'(下下星期|下星期|星期)([一二三四五六日天])', text)
+    if weekday_match:
+        prefix, day_char = weekday_match.groups()
+        target_weekday = WEEKDAY_MAP[day_char]
 
-    if weekday_full_match:
-        prefix = weekday_full_match.group(1) or ''
-        weekday_char = weekday_full_match.group(2)[2]  # Extract the '五' from '星期五'
-        target_weekday = weekday_map[weekday_char]
-        base_weekday = base_date.isoweekday()
+        if prefix == '星期':
+            # Same week
+            delta = (target_weekday - base_date.weekday() + 7) % 7
+            if delta == 0:
+                delta = 7  # Move to next occurrence if same day
+            target_date = base_date + timedelta(days=delta)
 
-        # Determine week offset
-        if prefix in ["呢個", "今個", ""]:
-            week_offset = 0
-        elif prefix in ["下個", "下"]:
-            week_offset = 1
-        elif prefix in ["下下個", "下下"]:
-            week_offset = 2
+        elif prefix == '下星期':
+            target_date = get_date_of_next_weekday(target_weekday, base_date)
+
+        elif prefix == '下下星期':
+            target_date = get_date_of_next_weekday(target_weekday, base_date) + timedelta(days=7)
+
         else:
-            week_offset = 0
+            return None
 
-        # Calculate the delta days to reach the correct weekday
-        days_until = (target_weekday - base_weekday) % 7
-        if days_until == 0 and week_offset > 0:
-            # Avoid picking "this" week when the target day is today but prefixed
-            days_until = 7
-
-        # Total days to add
-        total_days = days_until + (week_offset * 7 if days_until != 0 or week_offset > 0 else 0)
-        target_date = base_date + timedelta(days=total_days)
         print(f"[DEBUG] Calculated weekday: {target_date.date()} from text: {text}")
 
-        # Time handling
-        hour, minute = 12, 0  # Default noon
+        # Time parsing
+        hour, minute = 12, 0
         if "朝早" in text or "上午" in text:
             hour = 9
         elif "晏昼" in text or "下午" in text:
@@ -109,7 +118,6 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
         elif "夜晚" in text or "晚上" in text:
             hour = 20
 
-        # Handle specific times like "三点半"
         time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
         if time_match:
             hour = int(time_match.group(1))
@@ -121,7 +129,6 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
         return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     return None
-
 
 
 def extract_info_withLLM(text: str) -> MemoryItem:
