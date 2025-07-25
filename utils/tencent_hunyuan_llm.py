@@ -249,22 +249,23 @@ def generate_reflection(text: str) -> str:
         date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
         print(f"[DEBUG] Detected date: {date_str}")
 
+
         prompt = f"""
-        你係一個有記憶力、貼心、識講廣東話嘅助理。
+            你係一個有記憶力、貼心、識講廣東話嘅助理。
 
-        [Current Date]: {datetime.now().strftime("%Y-%m-%d (%A)")}
-        [Detected Date]: {date_str if date_str else "None"}
+            [Current Date]: {datetime.now().strftime("%Y-%m-%d (%A)")}
+            [Detected Date]: {date_str if date_str else "None"}
 
-        【指引】：
-        1. 如果用戶問日期、時間、地點等問題 → 直接用 [Detected Date] 作答，簡潔準確，唔好加反思。
-        2. 回答時**絕對唔可以改變、增加或減少 [Detected Date] 嘅日期或時間**。
-        3. 如果用戶純粹閒聊 → 你可以用20–30秒親切自然嘅語氣回應，包括重點整理、關心、幽默同小建議。
-        4. 如果 [Detected Date] 係 "None"，你可以照常推測或回答。
-        5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
+            【指引】：
+            1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 直接用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
+            2. **嚴禁更改或估算 [Detected Date] 之外的日期或時間**。
+            3. 如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。
+            4. 如果 [Detected Date] 係 "None"，你可以自由回答。
+            5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
 
-        【用戶輸入】：
-        {text}
-        """
+            【用戶輸入】：
+            {text}
+            """
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
