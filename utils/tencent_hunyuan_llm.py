@@ -76,7 +76,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
     if weekday_full_match:
         prefix = weekday_full_match.group(1) or ''
-        weekday_char = weekday_full_match.group(2)
+        weekday_char = weekday_full_match.group(2)[2]  # Extract the '五' from '星期五'
         target_weekday = weekday_map[weekday_char]
         base_weekday = base_date.isoweekday()
 
