@@ -219,7 +219,6 @@ def generate_reflection(text: str) -> str:
         client = get_hunyuan_client()
 
         detected_date = calculate_cantonese_date(text)        
-        req = models.ChatCompletionsRequest()
         
         # req.Messages = [
         #     {
@@ -260,12 +259,15 @@ def generate_reflection(text: str) -> str:
             print(f"[DEBUG] Detected date: {date_str}")
             user_message += f"\n系統幫佢計算咗日期，係：{date_str}"
 
-        req.messages = [
+        messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
+
+        req = models.ChatCompletionsRequest()
         req.Model = "hunyuan-standard"
         req.Temperature = 1
+        req.Messages = messages  # ✅ Required!
 
         resp = client.ChatCompletions(req)
         reflection = resp.Choices[0].Message.Content.strip()
