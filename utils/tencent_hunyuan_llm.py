@@ -228,22 +228,26 @@ def generate_reflection(text: str) -> str:
         )
 
         user_message = f"用戶話：「{text}」"
-        date_str = None
         if detected_date:
             date_str = detected_date.strftime("%Y年%m月%d號")
             print(f"[DEBUG] Detected date: {date_str}")
             user_message += f"\n系統幫佢計算咗日期，係：{date_str}"
 
-        # Construct Messages using the SDK's Message model
-        messages = [
-            models.Message(Role="system", Content=system_prompt),
-            models.Message(Role="user", Content=user_message)
-        ]
+        # Create Message objects and assign attributes
+        system_msg = models.Message()
+        system_msg.Role = "system"
+        system_msg.Content = system_prompt
+
+        user_msg = models.Message()
+        user_msg.Role = "user"
+        user_msg.Content = user_message
+
+        messages = [system_msg, user_msg]
 
         req = models.ChatCompletionsRequest()
         req.Model = "hunyuan-standard"
         req.Temperature = 1
-        req.Messages = messages  # Set list of Message objects, not dicts
+        req.Messages = messages
 
         resp = client.ChatCompletions(req)
 
@@ -258,4 +262,5 @@ def generate_reflection(text: str) -> str:
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
+
 
