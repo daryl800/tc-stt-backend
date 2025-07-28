@@ -238,13 +238,10 @@ def generate_reflection(text: str) -> str:
     try:
         client = get_hunyuan_client()
 
-        # Deterministic datetime
         detected_date = calculate_cantonese_date(text)
         print(f"[DEBUG] text: {text}")
-        # Format date as ISO string if available
         date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
         print(f"[DEBUG] Detected date: {date_str}")
-
 
         prompt = f"""
             你係一個有記憶力、貼心、識講廣東話嘅助理。
@@ -253,19 +250,16 @@ def generate_reflection(text: str) -> str:
             [Detected Date]: {date_str if date_str else "None"}
 
             【指引】：
-            1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 直接用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
-            2. **嚴禁更改或估算 [Detected Date] 之外的日期或時間**。
-            3. 如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。
-            4. 如果 [Detected Date] 係 "None"，你可以自由回答。
-            5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
+            1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 只可以用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
+            2. **嚴禁估算或想像 [Detected Date] 之外的任何日期或時間，亦唔好假裝知道而亂講**。
+            3. **你無法知道即時天氣或真實時間，如用戶問你，請老實講你唔知道，可以話「我唔知依家嘅天氣，但我記得你問過...」**。
+            4. 如果係閒聊 → 可以自由用自然語氣做簡短反思或建議。
+            5. 如果 [Detected Date] 係 "None"，你可以自由回答。
+            6. **只能用一句自然流暢嘅廣東話講，唔好用書面語、唔好解釋指引或翻譯內容。**
 
             【用戶輸入】：
             {text}
-            """
-
-        print("[DEBUG] Final prompt sent to model:")
-        print(prompt)
-
+                    """
 
         req = models.ChatCompletionsRequest()
         req.Messages = [{"Role": "user", "Content": prompt}]
@@ -281,3 +275,4 @@ def generate_reflection(text: str) -> str:
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
+
