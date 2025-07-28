@@ -218,33 +218,8 @@ def generate_reflection(text: str) -> str:
     try:
         client = get_hunyuan_client()
 
-        detected_date = calculate_cantonese_date(text)        
-        
-        # req.Messages = [
-        #     {
-        #         "Role": "system",
-        #         "Content": f"""
-        #             你係一個有記憶力、貼心、識講廣東話嘅助理。
+        detected_date = calculate_cantonese_date(text)
 
-        #             【指引】：
-        #             1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 直接用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
-        #             2. **嚴禁更改或估算 [Detected Date] 之外的日期或時間**。
-        #             3. 如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。
-        #             4. 如果 [Detected Date] 係 "None"，你可以自由回答。
-        #             5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
-        #             """
-        #     },
-        #     {
-        #         "Role": "user",
-        #         "Content": f"""\
-        #             [Current Date]: {datetime.now().strftime("%Y-%m-%d (%A)")}
-        #             [Detected Date]: {date_str if date_str else "None"}
-
-        #             【用戶輸入】：
-        #             {text}
-        #             """
-        #     }
-        # ]
         system_prompt = (
             "你是一個有禮貌、友善的粵語AI助理，用戶會以語音說出他想記低嘅嘢，"
             "你要用親切、溫柔嘅語氣幫佢回覆一句粵語句子，好似係一個人同佢傾偈咁。"
@@ -253,24 +228,29 @@ def generate_reflection(text: str) -> str:
         )
 
         user_message = f"用戶話：「{text}」"
-        
+        date_str = None
         if detected_date:
-            date_str = detected_date.strftime("%Y年%-m月%-d號")  # or 08月08號 if needed
+            date_str = detected_date.strftime("%Y年%m月%d號")
             print(f"[DEBUG] Detected date: {date_str}")
             user_message += f"\n系統幫佢計算咗日期，係：{date_str}"
 
+        # Construct Messages using the SDK's Message model
         messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
+            models.Message(Role="system", Content=system_prompt),
+            models.Message(Role="user", Content=user_message)
         ]
 
         req = models.ChatCompletionsRequest()
         req.Model = "hunyuan-standard"
         req.Temperature = 1
-        req.Messages = messages  # ✅ Required!
+        req.Messages = messages  # Set list of Message objects, not dicts
 
         resp = client.ChatCompletions(req)
-        reflection = resp.Choices[0].Message.Content.strip()
+
+        if resp.Choices and resp.Choices[0].Message:
+            reflection = resp.Choices[0].Message.Content.strip()
+        else:
+            raise ValueError("No response from model")
 
         print(f"[INFO] Reflection: {reflection}")
         return reflection
