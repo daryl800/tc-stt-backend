@@ -218,36 +218,51 @@ def generate_reflection(text: str) -> str:
     try:
         client = get_hunyuan_client()
 
-        detected_date = calculate_cantonese_date(text)
-        print(f"[DEBUG] text: {text}")
-        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
-        print(f"[DEBUG] Detected date: {date_str}")
-
+        detected_date = calculate_cantonese_date(text)        
         req = models.ChatCompletionsRequest()
-        req.Messages = [
-            {
-                "Role": "system",
-                "Content": f"""
-                    你係一個有記憶力、貼心、識講廣東話嘅助理。
+        
+        # req.Messages = [
+        #     {
+        #         "Role": "system",
+        #         "Content": f"""
+        #             你係一個有記憶力、貼心、識講廣東話嘅助理。
 
-                    【指引】：
-                    1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 直接用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
-                    2. **嚴禁更改或估算 [Detected Date] 之外的日期或時間**。
-                    3. 如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。
-                    4. 如果 [Detected Date] 係 "None"，你可以自由回答。
-                    5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
-                    """
-            },
-            {
-                "Role": "user",
-                "Content": f"""\
-                    [Current Date]: {datetime.now().strftime("%Y-%m-%d (%A)")}
-                    [Detected Date]: {date_str if date_str else "None"}
+        #             【指引】：
+        #             1. 如果用戶問日期、時間、地點等問題（例如「下星期四係幾號？」）→ 直接用 [Detected Date] 回答，用簡潔廣東話答出日期（例如：「下星期四係8月7號」）。
+        #             2. **嚴禁更改或估算 [Detected Date] 之外的日期或時間**。
+        #             3. 如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。
+        #             4. 如果 [Detected Date] 係 "None"，你可以自由回答。
+        #             5. **只能用純廣東話回應，用一句自然流暢嘅說話，不要解釋或翻譯。**
+        #             """
+        #     },
+        #     {
+        #         "Role": "user",
+        #         "Content": f"""\
+        #             [Current Date]: {datetime.now().strftime("%Y-%m-%d (%A)")}
+        #             [Detected Date]: {date_str if date_str else "None"}
 
-                    【用戶輸入】：
-                    {text}
-                    """
-            }
+        #             【用戶輸入】：
+        #             {text}
+        #             """
+        #     }
+        # ]
+        system_prompt = (
+            "你是一個有禮貌、友善的粵語AI助理，用戶會以語音說出他想記低嘅嘢，"
+            "你要用親切、溫柔嘅語氣幫佢回覆一句粵語句子，好似係一個人同佢傾偈咁。"
+            "如果用戶問咗一個關於日期嘅問題，而系統已經幫佢計算咗準確嘅日期，你就要根據呢個日期回覆，"
+            "唔好再自己計算。"
+        )
+
+        user_message = f"用戶話：「{text}」"
+        
+        if detected_date:
+            date_str = detected_date.strftime("%Y年%-m月%-d號")  # or 08月08號 if needed
+            print(f"[DEBUG] Detected date: {date_str}")
+            user_message += f"\n系統幫佢計算咗日期，係：{date_str}"
+
+        req.messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
         ]
         req.Model = "hunyuan-standard"
         req.Temperature = 1
