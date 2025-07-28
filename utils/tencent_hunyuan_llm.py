@@ -41,41 +41,32 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
-from datetime import datetime, timedelta
-import re
-from typing import Optional
-
-from datetime import datetime, timedelta
-from typing import Optional
-import re
-
-import re
-from datetime import datetime, timedelta
-from typing import Optional
-
-WEEKDAY_MAP = {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6, '天': 6}
+WEEKDAY_MAP = {"一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5, "日": 6, "天": 6}
+WEEK_PATTERNS = {
+    r'(下下星期)([一二三四五六日天])': 2,
+    r'(下星期)([一二三四五六日天])': 1,
+    r'(星期)([一二三四五六日天])': 0,
+}
 
 def get_date_of_next_weekday(target_weekday: int, base_date: datetime) -> datetime:
-    """
-    Returns the date of the target weekday in the *next* week (starting from next Monday).
-    target_weekday: 0 (Mon) to 6 (Sun)
-    """
     base_weekday = base_date.weekday()
-    days_until_next_monday = (7 - base_weekday) % 7 or 7
-    next_monday = base_date + timedelta(days=days_until_next_monday)
-    return next_monday + timedelta(days=target_weekday)
+    days_until_next = (target_weekday - base_weekday + 7) % 7
+    days_until_next = days_until_next or 7  # ensure next occurrence, not today
+    return base_date + timedelta(days=days_until_next)
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
-    """
-    Calculates dates from Cantonese expressions like:
-    - 今日, 聽日, 後日
-    - 星期五, 下星期五, 下下星期一
-    Handles correct offsets for week prefixes.
-    """
     base_date = base_date or datetime.now()
-    text = text.replace("礼拜", "星期").replace("聽日", "听日")
 
-    # Handle relative days
+    # 🔄 Normalize input
+    text = (
+        text.replace("礼拜", "星期")
+            .replace("禮拜", "星期")
+            .replace("个", "")
+            .replace("個", "")
+            .replace("聽日", "听日")
+    )
+
+    # Handle relative expressions
     if "听日" in text:
         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
     elif "後日" in text or "后日" in text:
@@ -85,48 +76,37 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     elif "今日" in text or "而家" in text:
         return base_date.replace(hour=12, minute=0)
 
-    # Match weekday expression
-    weekday_match = re.search(r'(下下星期|下星期|星期)([一二三四五六日天])', text)
-    if weekday_match:
-        prefix, day_char = weekday_match.groups()
-        target_weekday = WEEKDAY_MAP[day_char]
+    # Match and parse weekday expressions
+    for pattern, week_offset in WEEK_PATTERNS.items():
+        match = re.search(pattern, text)
+        if match:
+            prefix, day_char = match.groups()
+            target_weekday = WEEKDAY_MAP.get(day_char)
+            if target_weekday is None:
+                continue
 
-        if prefix == '星期':
-            # Same week
-            delta = (target_weekday - base_date.weekday() + 7) % 7
-            if delta == 0:
-                delta = 7  # Move to next occurrence if same day
-            target_date = base_date + timedelta(days=delta)
+            # Calculate target date
+            start_of_week = base_date - timedelta(days=base_date.weekday())
+            target_date = start_of_week + timedelta(days=target_weekday, weeks=week_offset)
 
-        elif prefix == '下星期':
-            target_date = get_date_of_next_weekday(target_weekday, base_date)
+            # Time parsing
+            hour, minute = 12, 0
+            if "朝早" in text or "上午" in text:
+                hour = 9
+            elif "晏昼" in text or "下午" in text:
+                hour = 14
+            elif "夜晚" in text or "晚上" in text:
+                hour = 20
 
-        elif prefix == '下下星期':
-            target_date = get_date_of_next_weekday(target_weekday, base_date) + timedelta(days=7)
+            time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
+            if time_match:
+                hour = int(time_match.group(1))
+                if "下午" in text and hour < 12:
+                    hour += 12
+                if time_match.group(2):  # 半
+                    minute = 30
 
-        else:
-            return None
-
-        print(f"[DEBUG] Calculated weekday: {target_date.date()} from text: {text}")
-
-        # Time parsing
-        hour, minute = 12, 0
-        if "朝早" in text or "上午" in text:
-            hour = 9
-        elif "晏昼" in text or "下午" in text:
-            hour = 14
-        elif "夜晚" in text or "晚上" in text:
-            hour = 20
-
-        time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
-        if time_match:
-            hour = int(time_match.group(1))
-            if "下午" in text and hour < 12:
-                hour += 12
-            if time_match.group(2):  # 半
-                minute = 30
-
-        return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     return None
 
