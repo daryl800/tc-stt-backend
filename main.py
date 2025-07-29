@@ -42,16 +42,16 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
-            filler_task = asyncio.to_thread(lambda: base64.b64encode(pick_random_filler()).decode())
-            transcribe_task = asyncio.create_task(transcribe_workflow(payload))
+            # filler_task = asyncio.to_thread(lambda: base64.b64encode(pick_random_filler()).decode())
+            # transcribe_task = asyncio.create_task(transcribe_workflow(payload))
 
-            # Send filler audio as soon as ready
-            filler_audio = await filler_task
-            await reply_to_FE(websocket, 'audio', filler_audio)
+            # # Send filler audio as soon as ready
+            # filler_audio = await filler_task
+            # await reply_to_FE(websocket, 'audio', filler_audio)
 
-            # Get transcription and wav bytes
-            transcription, wav_bytes = await transcribe_task
-            print(f"[INFO] Transcription result: {transcription}")
+            # # Get transcription and wav bytes
+            # transcription, wav_bytes = await transcribe_task
+            # print(f"[INFO] Transcription result: {transcription}")
 
             # --- Step C: Determine if it's a query (about memory)
             is_query = (
