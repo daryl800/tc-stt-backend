@@ -58,41 +58,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
             # Get transcription and wav bytes
             transcription, wav_bytes = await transcribe_task
-            print(f"[INFO] Transcription result: {transcription}")
-
-            # --- Step C: Determine if it's a query (about memory)
-            is_query = (
-                "有冇" in transcription
-                or "提過" in transcription
-                or "提过" in transcription
-                or "講過" in transcription
-                or "讲过" in transcription
-                or "談過" in transcription
-                or "談及過" in transcription
-                or "談過關於" in transcription
-                or "有冇講過" in transcription
-                or "有冇讲过" in transcription
-                or "係咪講過" in transcription
-                or "系咪讲过" in transcription
-                or "有冇提過" in transcription
-                or "有冇提过" in transcription
-                or "有冇提及過" in transcription
-                or "有冇提及过" in transcription
-                or "提及關於" in transcription
-                or "提及关于" in transcription
-            )
-
-            if is_query:
-                # Initial response (always sent first)
-                initial_tts = base64.b64encode(
-                    tencent_tts("等一阵……比少少时间我揾揾～")
-                ).decode()
-                # await enqueue_audio(websocket, initial_tts)
-                await reply_to_FE(websocket, 'audio', initial_tts)
-
         elif msg_type == "text":
             transcription = payload.strip()
-            print(f"📥 transcription from text: {transcription}")
         else:
             await websocket.send_json({
                 "type": "error",
@@ -100,6 +67,37 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             })
             print(f"📥 Error transcripting!")
             return
+
+        print(f"[INFO] Transcription result: {transcription}")
+        # --- Step C: Determine if it's a query (about memory)
+        is_query = (
+            "有冇" in transcription
+            or "提過" in transcription
+            or "提过" in transcription
+            or "講過" in transcription
+            or "讲过" in transcription
+            or "談過" in transcription
+            or "談及過" in transcription
+            or "談過關於" in transcription
+            or "有冇講過" in transcription
+            or "有冇讲过" in transcription
+            or "係咪講過" in transcription
+            or "系咪讲过" in transcription
+            or "有冇提過" in transcription
+            or "有冇提过" in transcription
+            or "有冇提及過" in transcription
+            or "有冇提及过" in transcription
+            or "提及關於" in transcription
+            or "提及关于" in transcription
+        )
+
+        if is_query:
+            # Initial response (always sent first)
+            initial_tts = base64.b64encode(
+                tencent_tts("等一阵……比少少时间我揾揾～")
+            ).decode()
+            # await enqueue_audio(websocket, initial_tts)
+            await reply_to_FE(websocket, 'audio', initial_tts)
 
         # extraction = await asyncio.to_thread(extract_info_with_timing, transcription)
         # reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.mainEvent)
