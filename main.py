@@ -208,7 +208,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             reflection_tts_bytes = await reflection_tts_task
             reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
             
-            await reply_to_FE(websocket, 'text', reflection_tts_bytes)
+            await reply_to_FE(websocket, 'text', reflection)
             await enqueue_audio(websocket, reflection_tts_wav)
 
     except Exception as e:
