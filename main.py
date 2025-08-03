@@ -12,22 +12,28 @@ from fastapi import WebSocket
 from utils.text_to_speech import tencent_tts, group_segments_by_limit
 from utils.tencent_hunyuan_llm import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
-from utils.query_memory import search_past_events  # assuming you placed the function here
+# assuming you placed the function here
+from utils.query_memory import search_past_events
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
 from utils.comm_utils import reply_to_FE, enqueue_audio
 from utils.filler_utils import pick_random_filler
 
+
 def extract_info_with_timing(transcription):
     start = time.time()
     result = extract_info_withLLM(transcription)
-    print("[DEBUG] LLM extraction took", round(time.time() - start, 2), "seconds")
+    print("[DEBUG] LLM extraction took", round(
+        time.time() - start, 2), "seconds")
     return result
+
 
 def generate_reflection_with_timing(transcription):
     start = time.time()
     result = generate_reflection(transcription)
-    print("[DEBUG] LLM generate_reflection took", round(time.time() - start, 2), "seconds")
+    print("[DEBUG] LLM generate_reflection took",
+          round(time.time() - start, 2), "seconds")
     return result
+
 
 async def transcribe_workflow(base64_audio_str: str):
     audio_bytes = base64.b64decode(base64_audio_str)
@@ -37,6 +43,7 @@ async def transcribe_workflow(base64_audio_str: str):
     transcription = await transcribe_tencent(wav_path)
     os.remove(wav_path)
     return transcription, wav_bytes
+
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:
@@ -55,21 +62,21 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
             # --- Step C: Determine if it's a query (about memory)
             is_query = (
-                "有冇" in transcription 
-                or "提過" in transcription 
+                "有冇" in transcription
+                or "提過" in transcription
                 or "提过" in transcription
-                or "講過" in transcription 
+                or "講過" in transcription
                 or "讲过" in transcription
                 or "談過" in transcription
                 or "談及過" in transcription
-                or "談過關於" in transcription 
-                or "有冇講過" in transcription 
-                or "有冇讲过" in transcription 
+                or "談過關於" in transcription
+                or "有冇講過" in transcription
+                or "有冇讲过" in transcription
                 or "係咪講過" in transcription
-                or "系咪讲过" in transcription 
-                or "有冇提過" in transcription 
+                or "系咪讲过" in transcription
+                or "有冇提過" in transcription
                 or "有冇提过" in transcription
-                or "有冇提及過" in transcription 
+                or "有冇提及過" in transcription
                 or "有冇提及过" in transcription
                 or "提及關於" in transcription
                 or "提及关于" in transcription
@@ -101,8 +108,10 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         #     reflection = await reflection_task
         #     reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
 
-        extract_task = asyncio.to_thread(extract_info_with_timing, transcription)
-        reflection_task = asyncio.to_thread(generate_reflection_with_timing, transcription)
+        extract_task = asyncio.to_thread(
+            extract_info_with_timing, transcription)
+        reflection_task = asyncio.to_thread(
+            generate_reflection_with_timing, transcription)
 
         try:
             # ==== DO NOT DO THIS =====
@@ -116,7 +125,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
 
             # 這時 extract_task 可能還沒跑完，沒關係
             extraction = await extract_task
-        
+
         except Exception as e:
             print(f"[ERROR] TTS or extraction failed: {e}")
             # response_tts_wav = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
@@ -130,14 +139,13 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
-
         # # --- Step C: Determine if it's a query (about memory)
         # is_query = (
-        #     "有冇" in transcription 
-        #     or "提過" in transcription 
-        #     or "講過" in transcription 
-        #     or "有冇講過" in transcription 
-        #     or "有冇提及過" in transcription 
+        #     "有冇" in transcription
+        #     or "提過" in transcription
+        #     or "講過" in transcription
+        #     or "有冇講過" in transcription
+        #     or "有冇提及過" in transcription
         #     or "提及关于" in transcription
         # )
 
@@ -151,7 +159,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # await reply_to_FE(websocket, 'audio', initial_tts)
 
             try:
-                answer = search_past_events(extraction)  # Assume this returns a list
+                # Assume this returns a list
+                answer = search_past_events(extraction)
                 segments = []
 
                 if answer:
@@ -174,7 +183,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     if segments:
                         combined = AudioSegment.empty()
                         tts_chunks = group_segments_by_limit(segments)
-                        
+
                         # for chunk in tts_chunks:
                         #     tts_audio_bytes = tencent_tts(chunk)
                         #     audio_segment = AudioSegment.from_file(io.BytesIO(tts_audio_bytes), format="wav")
@@ -183,32 +192,38 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                         # buf = io.BytesIO()
                         # combined.export(buf, format="wav")
                         # accumulated_tts_wav = base64.b64encode(buf.getvalue()).decode()
-                        
+
                         # await enqueue_audio(websocket, accumulated_tts_wav)
 
                         for chunk in tts_chunks:
                             tts_audio_bytes = await asyncio.to_thread(tencent_tts, chunk)
-                            b64_audio = base64.b64encode(tts_audio_bytes).decode()
+                            b64_audio = base64.b64encode(
+                                tts_audio_bytes).decode()
                             await enqueue_audio(websocket, b64_audio)
 
                 else:
                     no_match_tts = base64.b64encode(
-                        tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) + "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
+                        tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) +
+                                    "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
                     ).decode()
                     await enqueue_audio(websocket, no_match_tts)
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
-                error_tts = base64.b64encode(tencent_tts("出错喇，请稍后再试。")).decode()
+                error_tts = base64.b64encode(
+                    tencent_tts("出错喇，请稍后再试。")).decode()
                 await enqueue_audio(websocket, error_tts)
         else:
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
             reflection_tts_bytes = await reflection_tts_task
-            reflection_tts_wav = base64.b64encode(reflection_tts_bytes).decode()
-            
-            await reply_to_FE(websocket, 'text', reflection)
+            reflection_tts_wav = base64.b64encode(
+                reflection_tts_bytes).decode()
+
+            if (msg_type == "text"):
+                await reply_to_FE(websocket, 'text', reflection)
+
             await enqueue_audio(websocket, reflection_tts_wav)
 
     except Exception as e:
