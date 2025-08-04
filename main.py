@@ -91,20 +91,12 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             or "提及关于" in transcription
         )
 
+        # Send inital response ASAP if it is a query
         if is_query:
-            # Initial response (always sent first)
             initial_tts = base64.b64encode(
                 tencent_tts("等一阵……比少少时间我揾揾～")
             ).decode()
-            # await enqueue_audio(websocket, initial_tts)
             await reply_to_FE(websocket, 'audio', initial_tts)
-
-        # extraction = await asyncio.to_thread(extract_info_with_timing, transcription)
-        # reflection_task = asyncio.to_thread(generate_reflection_with_timing, extraction.mainEvent)
-
-        # try:
-        #     reflection = await reflection_task
-        #     reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
 
         extract_task = asyncio.to_thread(
             extract_info_with_timing, transcription)
@@ -112,11 +104,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             generate_reflection_with_timing, transcription)
 
         try:
-            # ==== DO NOT DO THIS =====
-            # Run reflection + other async ops if needed in parallel
-            # extraction, reflection = await asyncio.gather(extract_task, reflection_task)
-            # =========================
-
             # 只等 reflection，立刻啟動 TTS
             reflection = await reflection_task
             reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
@@ -137,25 +124,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         except Exception as e:
             print(f"[ERROR] Failed to save to LeanCloud: {e}")
 
-        # # --- Step C: Determine if it's a query (about memory)
-        # is_query = (
-        #     "有冇" in transcription
-        #     or "提過" in transcription
-        #     or "講過" in transcription
-        #     or "有冇講過" in transcription
-        #     or "有冇提及過" in transcription
-        #     or "提及关于" in transcription
-        # )
-
         if is_query:
-            # # Initial response (always sent first)
-            # initial_tts = base64.b64encode(
-            #     # tencent_tts("等一阵，我帮你搵吓你之前讲过关于" + ", ".join(extraction.tags) + "嘅嘢!")
-            #     tencent_tts("等一阵，我揾揾")
-            # ).decode()
-            # # await enqueue_audio(websocket, initial_tts)
-            # await reply_to_FE(websocket, 'audio', initial_tts)
-
             try:
                 # Assume this returns a list
                 answer = search_past_events(extraction)
@@ -213,15 +182,14 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     tencent_tts("出错喇，请稍后再试。")).decode()
                 await enqueue_audio(websocket, error_tts)
         else:
+            print(f"[DEBUG] sending back reflection in text: {reflection}")
+            await reply_to_FE(websocket, 'text', reflection)
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
             reflection_tts_bytes = await reflection_tts_task
             reflection_tts_wav = base64.b64encode(
                 reflection_tts_bytes).decode()
-
-            print(f"[DEBUG] reflection: {reflection}")
-            await reply_to_FE(websocket, 'text', reflection)
-            print(f"[DEBUG] Sending back reflection ...")
+            print(f"[DEBUG] Sending back reflection in voice ...")
             await enqueue_audio(websocket, reflection_tts_wav)
 
     except Exception as e:
