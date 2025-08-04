@@ -98,7 +98,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
         two_days_after_tomorrow_keywords = {
             "大後日", "大后日",  # Traditional + Simplified
-            "大後天", "大后天"，
+            "大後天", "大后天",
             "大後早", "大后早",
             "大後朝", "大后朝",
             "大後晚", "大后晚"
