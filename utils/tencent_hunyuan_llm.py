@@ -71,14 +71,57 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     )
 
     # Handle relative expressions
-    if "聽日" in text or "明日" in text or "聽晚" in text or "明晚" in text or "聽朝" in text or "明朝" in text:
-        return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
-    elif "後日" in text or "后日" in text:
-        return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
-    elif "大後日" in text:
-        return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
-    elif "今日" in text or "而家" in text:
-        return base_date.replace(hour=12, minute=0)
+    from datetime import timedelta
+
+    def parse_date_from_text(text: str, base_date):
+        text = text.strip()
+
+        # Traditional + Simplified Chinese terms
+        tomorrow_keywords = {
+            "聽日", "听日",
+            "聽早", "听早",
+            "聽朝", "听朝",
+            "聽晚", "听晚",
+            "明日",
+            "明早",
+            "明朝",
+            "明晚"
+        }
+
+        day_after_tomorrow_keywords = {
+            "後日", "后日",
+            "後天", "后天",
+            "後早", "后早",
+            "後朝", "后朝",
+            "後晚", "后晚"
+        }
+
+        two_days_after_tomorrow_keywords = {
+            "大後日", "大后日",  # Traditional + Simplified
+            "大後天", "大后天"，
+            "大後早", "大后早",
+            "大後朝", "大后朝",
+            "大後晚", "大后晚"
+        }
+
+        today_keywords = {
+            "今日", "而家",  # Traditional
+            "今天", "现在"   # Simplified
+        }
+
+        if any(kw in text for kw in tomorrow_keywords):
+            return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
+
+        elif any(kw in text for kw in day_after_tomorrow_keywords):
+            return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
+
+        elif any(kw in text for kw in two_days_after_tomorrow_keywords):
+            return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
+
+        elif any(kw in text for kw in today_keywords):
+            return base_date.replace(hour=12, minute=0)
+
+        return None  # if no match found
 
     # Match and parse weekday expressions
     for pattern, week_offset in WEEK_PATTERNS.items():
