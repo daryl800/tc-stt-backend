@@ -1,3 +1,6 @@
+from typing import Optional
+from datetime import datetime, timedelta
+import re
 import json
 from datetime import datetime, timedelta  # Add this at the top of your file
 from tencentcloud.common import credential
@@ -19,14 +22,17 @@ _hunyuan_client = None
 #         _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
 #     return _hunyuan_client
 
+
 def get_hunyuan_client():
     global _hunyuan_client
     if _hunyuan_client is None:
         try:
             cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-            http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+            http_profile = HttpProfile(
+                endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
             client_profile = ClientProfile(httpProfile=http_profile)
-            _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
+            _hunyuan_client = hunyuan_client.HunyuanClient(
+                cred, "ap-hongkong", client_profile)
         except Exception as e:
             print(f"初始化混元客户端失败: {e}")
             raise  # 或返回 None，根据业务需求处理
@@ -36,10 +42,6 @@ def get_hunyuan_client():
 
 
 # Date Calculation Helpers
-import re
-import json
-from datetime import datetime, timedelta
-from typing import Optional
 
 WEEKDAY_MAP = {"一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5, "日": 6, "天": 6}
 WEEK_PATTERNS = {
@@ -48,11 +50,13 @@ WEEK_PATTERNS = {
     r'(星期)([一二三四五六日天])': 0,
 }
 
+
 def get_date_of_next_weekday(target_weekday: int, base_date: datetime) -> datetime:
     base_weekday = base_date.weekday()
     days_until_next = (target_weekday - base_weekday + 7) % 7
     days_until_next = days_until_next or 7  # ensure next occurrence, not today
     return base_date + timedelta(days=days_until_next)
+
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     base_date = base_date or datetime.now()
@@ -67,7 +71,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     )
 
     # Handle relative expressions
-    if "听日" in text:
+    if "聽日" in text or "明日" in text or "聽晚" in text or "明晚" in text or "聽朝" in text or "明朝" in text:
         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
     elif "後日" in text or "后日" in text:
         return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
@@ -87,7 +91,8 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
             # Calculate target date
             start_of_week = base_date - timedelta(days=base_date.weekday())
-            target_date = start_of_week + timedelta(days=target_weekday, weeks=week_offset)
+            target_date = start_of_week + \
+                timedelta(days=target_weekday, weeks=week_offset)
 
             # Time parsing
             hour, minute = 12, 0
@@ -117,9 +122,10 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
         # Deterministic datetime
         detected_date = calculate_cantonese_date(text)
-        print(f"[DEBUG] text: {text}")
+        print(f"[DEBUG] text pasted in extract_info_withLLM: {text}")
         # Format date as ISO string if available
-        date_str = detected_date.strftime("%Y-%m-%dT%H:%M") if detected_date else ""
+        date_str = detected_date.strftime(
+            "%Y-%m-%dT%H:%M") if detected_date else ""
         print(f"[DEBUG] Detected date: {date_str}")
 
         prompt = f"""
@@ -168,7 +174,6 @@ def extract_info_withLLM(text: str) -> MemoryItem:
         # Force deterministic date if available
         final_date = date_str if data.get("isReminder") else ""
 
-
         return MemoryItem(
             category=data.get("category", "General"),
             transcription=text,
@@ -194,7 +199,8 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             isReminder=False,
             isQuery=False,
             location=[],
-            tags=[f"Error: {str(e)}"] if not isinstance(e, json.JSONDecodeError) else [],
+            tags=[f"Error: {str(e)}"] if not isinstance(
+                e, json.JSONDecodeError) else [],
             eventCreatedAt=datetime.now(),
             originalVoice_Url=None,
             sourceLang="yue-HK",
@@ -207,7 +213,8 @@ if __name__ == "__main__":
     test_text = "提醒我，听日我约咗人食晚饭。"
     test_base_date = datetime(2025, 7, 21)  # Monday
     calculated = calculate_cantonese_date(test_text, test_base_date)
-    print(f"Calculated date: {calculated.strftime('%Y-%m-%d %H:%M') if calculated else 'None'}")
+    print(
+        f"Calculated date: {calculated.strftime('%Y-%m-%d %H:%M') if calculated else 'None'}")
 
     result = extract_info_withLLM(test_text)
     print(f"Extracted Date: {result.reminderDatetime}")
@@ -221,7 +228,7 @@ def generate_reflection(text: str) -> str:
         detected_date = calculate_cantonese_date(text)
 
         system_prompt = (
-            "你是一個有禮貌、友善的粵語AI助理，用戶會以語音說出他想記低嘅嘢，" 
+            "你是一個有禮貌、友善的粵語AI助理，用戶會以語音說出他想記低嘅嘢，"
             "如果用戶問咗一個關於日期嘅問題，而系統已經幫佢計算咗準確嘅日期，你就要根據呢個日期回覆，（例如：「下星期四係8月7號」）,回复的内容不需要加入其他东西，"
             "唔好再自己計算。"
             "如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。"
@@ -263,5 +270,3 @@ def generate_reflection(text: str) -> str:
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
-
-

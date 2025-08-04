@@ -2,6 +2,7 @@
 import asyncio
 from fastapi import WebSocket
 
+
 async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
     await websocket.send_json({
         "type":  msg_type,
@@ -11,12 +12,14 @@ async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: str):
 audio_queue = asyncio.Queue()
 sending_task = None
 
+
 async def enqueue_audio(websocket: WebSocket, base64_wav: str):
     global sending_task
     await audio_queue.put((websocket, base64_wav))
 
     if sending_task is None or sending_task.done():
         sending_task = asyncio.create_task(audio_sending_loop())
+
 
 async def audio_sending_loop():
     while not audio_queue.empty():
