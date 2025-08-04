@@ -10,7 +10,6 @@ async def reply_to_FE(websocket: WebSocket, msg_type: str, payload: Union[dict, 
         "payload": payload
     })
 
-
 audio_queue = asyncio.Queue()
 sending_task = None
 

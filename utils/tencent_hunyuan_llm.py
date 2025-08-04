@@ -187,6 +187,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             originalVoice_Url=None,
             sourceLang="yue-HK",
             userId=None
+            reflection=None,
         )
 
     except Exception as e:
