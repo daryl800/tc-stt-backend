@@ -193,7 +193,6 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             await enqueue_audio(websocket, reflection_tts_wav)
 
     except Exception as e:
-        await websocket.send_json({
-            "type": "error",
-            "message": str(e)
-        })
+        print(f"[ERROR] TTS or extraction failed: {e}")
+        await reply_to_FE(websocket, "error", f"Extraction or TTS failed: {e}")
+        return  # <- STOP execution here
