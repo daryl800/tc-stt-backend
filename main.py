@@ -182,8 +182,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                     tencent_tts("出错喇，请稍后再试。")).decode()
                 await enqueue_audio(websocket, error_tts)
         else:
-            print(f"[DEBUG] sending back reflection in text: {reflection}")
-            await reply_to_FE(websocket, 'text', reflection)
+            print(f"[DEBUG] sending back extraction in text: {extraction}")
+            await reply_to_FE(websocket, 'text', extraction)
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
             reflection_tts_bytes = await reflection_tts_task
