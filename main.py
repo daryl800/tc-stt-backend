@@ -17,6 +17,7 @@ from utils.query_memory import search_past_events
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
 from utils.comm_utils import reply_to_FE, enqueue_audio
 from utils.filler_utils import pick_random_filler
+from fastapi.encoders import jsonable_encoder
 
 
 def extract_info_with_timing(transcription):
@@ -183,7 +184,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                 await enqueue_audio(websocket, error_tts)
         else:
             print(f"[DEBUG] sending back extraction in text: {extraction}")
-            await reply_to_FE(websocket, 'obj', extraction.dict())
+            await reply_to_FE(websocket, 'obj', jsonable_encoder(extraction))
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
             reflection_tts_bytes = await reflection_tts_task
