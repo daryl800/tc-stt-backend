@@ -38,100 +38,79 @@ def get_hunyuan_client():
             raise  # 或返回 None，根据业务需求处理
     return _hunyuan_client
 
-# You would need to implement these helper functions:
 
+# Example mappings for normalization
+TRAD_TO_SIMP_REPLACEMENTS = {
+    "聽日": "听日",
+    "聽朝": "听朝",
+    "聽早": "听早",
+    "聽晚": "听晚",
+    "禮拜": "星期",
+    "礼拜": "星期",
+    "後日": "后日",
+    "後天": "后天",
+    "後朝": "后朝",
+    "後早": "后早",
+    "後晚": "后晚",
+    "大後日": "大后日",
+    "大後天": "大后天",
+    "個": "",
+    "个": ""
+}
 
-# Date Calculation Helpers
+# Simplified keyword sets (after normalization)
+TOMORROW_KEYWORDS = {"听日", "听早", "听朝", "听晚", "明日", "明早", "明朝", "明晚"}
+DAY_AFTER_TMR_KEYWORDS = {"后日", "后天", "后早", "后朝", "后晚"}
+TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后天", "大后早", "大后朝", "大后晚"}
+TODAY_KEYWORDS = {"今日", "而家", "今天", "现在"}
 
-WEEKDAY_MAP = {"一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5, "日": 6, "天": 6}
+# Assume these are defined elsewhere
 WEEK_PATTERNS = {
-    r'(下下星期)([一二三四五六日天])': 2,
-    r'(下星期)([一二三四五六日天])': 1,
-    r'(星期)([一二三四五六日天])': 0,
+    r"(下)?星期([一二三四五六日天])": 1,
+    r"今星期([一二三四五六日天])": 0,
+    r"(上)?星期([一二三四五六日天])": -1
+}
+WEEKDAY_MAP = {
+    "一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5,
+    "日": 6, "天": 6
 }
 
 
-def get_date_of_next_weekday(target_weekday: int, base_date: datetime) -> datetime:
-    base_weekday = base_date.weekday()
-    days_until_next = (target_weekday - base_weekday + 7) % 7
-    days_until_next = days_until_next or 7  # ensure next occurrence, not today
-    return base_date + timedelta(days=days_until_next)
+def normalize_text(text: str) -> str:
+    for trad, simp in TRAD_TO_SIMP_REPLACEMENTS.items():
+        text = text.replace(trad, simp)
+    return text
 
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
     base_date = base_date or datetime.now()
+    text = normalize_text(text.strip())
 
-    # 🔄 Normalize input
-    text = (
-        text.replace("礼拜", "星期")
-            .replace("禮拜", "星期")
-            .replace("个", "")
-            .replace("個", "")
-            .replace("聽日", "听日")
-    )
-
-    # Traditional + Simplified Chinese terms
-    tomorrow_keywords = {
-        "聽日", "听日",
-        "聽早", "听早",
-        "聽朝", "听朝",
-        "聽晚", "听晚",
-        "明日",
-        "明早",
-        "明朝",
-        "明晚"
-    }
-
-    day_after_tomorrow_keywords = {
-        "後日", "后日",
-        "後天", "后天",
-        "後早", "后早",
-        "後朝", "后朝",
-        "後晚", "后晚"
-    }
-
-    two_days_after_tomorrow_keywords = {
-        "大後日", "大后日",
-        "大後天", "大后天",
-        "大後早", "大后早",
-        "大後朝", "大后朝",
-        "大後晚", "大后晚"
-    }
-
-    today_keywords = {
-        "今日", "而家",
-        "今天", "现在"
-    }
-
-    if any(kw in text for kw in tomorrow_keywords):
+    # Step 1: Relative keywords
+    if any(kw in text for kw in TOMORROW_KEYWORDS):
         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
-
-    elif any(kw in text for kw in day_after_tomorrow_keywords):
+    elif any(kw in text for kw in DAY_AFTER_TMR_KEYWORDS):
         return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
-
-    elif any(kw in text for kw in two_days_after_tomorrow_keywords):
+    elif any(kw in text for kw in TWO_DAYS_AFTER_TMR_KEYWORDS):
         return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
-
-    elif any(kw in text for kw in today_keywords):
+    elif any(kw in text for kw in TODAY_KEYWORDS):
         return base_date.replace(hour=12, minute=0)
 
-    return None  # if no match found
-
-    # Match and parse weekday expressions
+    # Step 2: Match "星期X" patterns
     for pattern, week_offset in WEEK_PATTERNS.items():
         match = re.search(pattern, text)
         if match:
-            prefix, day_char = match.groups()
+            _, day_char = match.groups()
             target_weekday = WEEKDAY_MAP.get(day_char)
             if target_weekday is None:
                 continue
 
-            # Calculate target date
+            # Find date of that weekday in target week
             start_of_week = base_date - timedelta(days=base_date.weekday())
             target_date = start_of_week + \
                 timedelta(days=target_weekday, weeks=week_offset)
 
-            # Time parsing
+            # Step 3: Determine hour/minute
             hour, minute = 12, 0
             if "朝早" in text or "上午" in text:
                 hour = 9
