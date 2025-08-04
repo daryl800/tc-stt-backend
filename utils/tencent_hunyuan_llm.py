@@ -186,8 +186,8 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             eventCreatedAt=datetime.now(),
             originalVoice_Url=None,
             sourceLang="yue-HK",
-            userId=None
-            reflection=None,
+            userId=None,
+            reflection=None
         )
 
     except Exception as e:
