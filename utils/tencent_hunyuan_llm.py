@@ -128,7 +128,9 @@ def contains_date_keywords(text: str) -> bool:
         TWO_DAYS_AFTER_TMR_KEYWORDS |
         TODAY_KEYWORDS
     )
-    return any(kw in text for kw in all_keywords)
+    contains_date_kw = any(kw in text for kw in all_keywords)
+    print(f"[DEBUG] Contain any date keywards?: {contains_date_kw}")
+    return contains_date_kw
 
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
