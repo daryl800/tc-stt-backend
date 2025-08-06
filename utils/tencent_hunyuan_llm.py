@@ -84,11 +84,13 @@ TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后朝", "大后晚", "大后日
 TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
-WEEK_PATTERNS = {
-    r"(下)?星期([一二三四五六日天])": 1,
-    r"(今)?星期([一二三四五六日天])": 0,
-    r"(上)?星期([一二三四五六日天])": -1
-}
+WEEK_PATTERNS = [
+    (r"今星期([一二三四五六日天])", 0),  # this week
+    (r"下星期([一二三四五六日天])", 1),  # next week
+    (r"上星期([一二三四五六日天])", -1),  # last week
+    (r"星期([一二三四五六日天])", 0)     # no modifier — assume this week
+]
+
 WEEKDAY_MAP = {
     "一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5,
     "日": 6, "天": 6
@@ -161,8 +163,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     elif any(kw in text for kw in TODAY_KEYWORDS):
         return base_date.replace(hour=hour, minute=minute)
 
-    # Group 2: weekday (e.g., 星期三)
-    for pattern, week_offset in WEEK_PATTERNS.items():
+    for pattern, week_offset in WEEK_PATTERNS:
         match = re.search(pattern, text)
         if match:
             _, day_char = match.groups()
@@ -170,12 +171,10 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
             if target_weekday is None:
                 continue
 
-            # Find date of that weekday in target week
             start_of_week = base_date - timedelta(days=base_date.weekday())
             target_date = start_of_week + \
                 timedelta(days=target_weekday, weeks=week_offset)
-
-        return target_date.replace(hour=hour, minute=minute)
+            return target_date.replace(hour=hour, minute=minute)
 
     return None
 
