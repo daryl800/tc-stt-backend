@@ -186,29 +186,18 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
         return base_date.replace(hour=hour, minute=minute)
 
     # Group 2: weekday (e.g., 星期三)
-    WEEK_PREFIX_MAP = {
-        "上": -1,
-        "本": 0,
-        "这": 0,
-        "呢个": 0,
-        "下": 1
-    }
+    for pattern, week_offset in WEEK_PATTERNS.items():
+        match = re.search(pattern, text)
+        if match:
+            _, day_char = match.groups()
+            target_weekday = WEEKDAY_MAP.get(day_char)
+            if target_weekday is None:
+                continue
 
-    # Group 2: full pattern with week prefix (e.g., 下星期三)
-    match = re.search(r'(上|下|本|这|呢个)?(?:星期|周)([一二三四五六日天])', text)
-    if match:
-        week_prefix, day_char = match.groups()
-        week_offset = WEEK_PREFIX_MAP.get(
-            week_prefix, 0)  # default to current week
-
-        target_weekday = WEEKDAY_MAP[day_char]
-
-        # Start of the current week (Monday)
-        start_of_week = base_date - timedelta(days=base_date.weekday())
-
-        # Add days to get to target weekday, apply week offset
-        target_date = start_of_week + \
-            timedelta(days=target_weekday, weeks=week_offset)
+            # Find date of that weekday in target week
+            start_of_week = base_date - timedelta(days=base_date.weekday())
+            target_date = start_of_week + \
+                timedelta(days=target_weekday, weeks=week_offset)
 
         return target_date.replace(hour=hour, minute=minute)
 
