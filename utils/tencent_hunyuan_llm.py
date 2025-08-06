@@ -122,15 +122,22 @@ def extract_time(text: str):
 
 
 def contains_date_keywords(text: str) -> bool:
+    text = normalize_text(text)
+
     all_keywords = (
         TOMORROW_KEYWORDS |
         DAY_AFTER_TMR_KEYWORDS |
         TWO_DAYS_AFTER_TMR_KEYWORDS |
         TODAY_KEYWORDS
     )
+
     contains_date_kw = any(kw in text for kw in all_keywords)
-    print(f"[DEBUG] Contain any date keywards?: {contains_date_kw}")
-    return contains_date_kw
+    contains_week_pattern = any(re.search(pattern, text)
+                                for pattern in WEEK_PATTERNS)
+
+    result = contains_date_kw or contains_week_pattern
+    print(f"[DEBUG] Contain any date keywards?: {result}")
+    return result
 
 
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
