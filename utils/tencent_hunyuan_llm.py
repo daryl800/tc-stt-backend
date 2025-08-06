@@ -80,7 +80,7 @@ TRAD_TO_SIMP_REPLACEMENTS = {
 TOMORROW_KEYWORDS = {"听日", "听朝", "听晚", "听日中午"}
 DAY_AFTER_TMR_KEYWORDS = {"后日",  "后朝", "后晚", "后日中午"}
 TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后朝", "大后晚", "大后日中午"}
-TODAY_KEYWORDS = {"今日", "而家", "今天", "现在"}
+TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
@@ -100,11 +100,82 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
-    base_date = base_date or datetime.now()
-    text = normalize_text(text.strip())
+# def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
+#     base_date = base_date or datetime.now()
+#     text = normalize_text(text.strip())
 
-    # Step 1: Relative keywords
+#     # Step 1: Relative keywords
+#     if any(kw in text for kw in TOMORROW_KEYWORDS):
+#         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
+#     elif any(kw in text for kw in DAY_AFTER_TMR_KEYWORDS):
+#         return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
+#     elif any(kw in text for kw in TWO_DAYS_AFTER_TMR_KEYWORDS):
+#         return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
+#     elif any(kw in text for kw in TODAY_KEYWORDS):
+#         return base_date.replace(hour=12, minute=0)
+
+#     # Step 2: Match "星期X" patterns
+#     for pattern, week_offset in WEEK_PATTERNS.items():
+#         match = re.search(pattern, text)
+#         if match:
+#             _, day_char = match.groups()
+#             target_weekday = WEEKDAY_MAP.get(day_char)
+#             if target_weekday is None:
+#                 continue
+
+#             # Find date of that weekday in target week
+#             start_of_week = base_date - timedelta(days=base_date.weekday())
+#             target_date = start_of_week + \
+#                 timedelta(days=target_weekday, weeks=week_offset)
+
+#             # Step 3: Determine hour/minute
+#             hour, minute = 12, 0
+#             if "听朝" in text or "后朝" in text or "大后朝" in text:
+#                 hour = 9
+#             elif "晏昼" in text or "下昼" in text or "下午" in text:
+#                 hour = 14
+#             elif "晚" in text:
+#                 hour = 20
+
+#             time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
+#             if time_match:
+#                 hour = int(time_match.group(1))
+#                 if "下午" in text and hour < 12:
+#                     hour += 12
+#                 if time_match.group(2):  # 半
+#                     minute = 30
+
+#             return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+#     return None
+
+# Extract time if mentioned
+def extract_time(text: str):
+    hour, minute = 12, 0  # default noon
+
+    if "早" in text or "朝" in text or "上昼" in text:
+        hour = 9
+    elif "午" in text or "下昼" in text:
+        hour = 14
+    elif "晚" in text:
+        hour = 20
+
+    # Find time like 7點, 8點半, 9:15
+    match = re.search(r'(?P<hour>\d{1,2})(點|:)(?P<minute>\d{1,2})?', text)
+    if match:
+        hour = int(match.group("hour"))
+        minute = int(match.group("minute")) if match.group("minute") else 0
+
+    return hour, minute
+
+
+def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
+    if base_date is None:
+        base_date = datetime.now()
+
+    hour, minute = extract_time(text)
+
+    # Group 1: relative dates
     if any(kw in text for kw in TOMORROW_KEYWORDS):
         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
     elif any(kw in text for kw in DAY_AFTER_TMR_KEYWORDS):
@@ -114,38 +185,14 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
     elif any(kw in text for kw in TODAY_KEYWORDS):
         return base_date.replace(hour=12, minute=0)
 
-    # Step 2: Match "星期X" patterns
-    for pattern, week_offset in WEEK_PATTERNS.items():
-        match = re.search(pattern, text)
-        if match:
-            _, day_char = match.groups()
-            target_weekday = WEEKDAY_MAP.get(day_char)
-            if target_weekday is None:
-                continue
-
-            # Find date of that weekday in target week
-            start_of_week = base_date - timedelta(days=base_date.weekday())
-            target_date = start_of_week + \
-                timedelta(days=target_weekday, weeks=week_offset)
-
-            # Step 3: Determine hour/minute
-            hour, minute = 12, 0
-            if "听朝" in text or "后朝" in text or "大后朝" in text:
-                hour = 9
-            elif "晏昼" in text or "下昼" in text or "下午" in text:
-                hour = 14
-            elif "晚" in text:
-                hour = 20
-
-            time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
-            if time_match:
-                hour = int(time_match.group(1))
-                if "下午" in text and hour < 12:
-                    hour += 12
-                if time_match.group(2):  # 半
-                    minute = 30
-
-            return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    # Group 2: weekday (e.g., 星期三)
+    weekday_match = re.search(r'星期([一二三四五六日天])', text)
+    if weekday_match:
+        target_weekday = WEEKDAY_MAP[weekday_match.group(1)]
+        days_ahead = (target_weekday - base_date.weekday() + 7) % 7
+        if days_ahead == 0:
+            days_ahead = 7  # Next week
+        return (base_date + timedelta(days=days_ahead)).replace(hour=hour, minute=minute)
 
     return None
 
