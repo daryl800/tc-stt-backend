@@ -85,9 +85,9 @@ TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
-    (r"(今)?星期([一二三四五六日天])", 0),
-    (r"(下)?星期([一二三四五六日天])", 1),
-    (r"(上)?星期([一二三四五六日天])", -1)
+    r"(下)?星期([一二三四五六日天])": 1,
+    r"(今)?星期([一二三四五六日天])": 0,
+    r"(上)?星期([一二三四五六日天])": -1
 }
 
 WEEKDAY_MAP = {
@@ -162,6 +162,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     elif any(kw in text for kw in TODAY_KEYWORDS):
         return base_date.replace(hour=hour, minute=minute)
 
+    # Group 2: weekday (e.g., 星期三)
     for pattern, week_offset in WEEK_PATTERNS.items():
         match = re.search(pattern, text)
         if match:
@@ -170,10 +171,12 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
             if target_weekday is None:
                 continue
 
+            # Find date of that weekday in target week
             start_of_week = base_date - timedelta(days=base_date.weekday())
             target_date = start_of_week + \
                 timedelta(days=target_weekday, weeks=week_offset)
-            return target_date.replace(hour=hour, minute=minute)
+
+        return target_date.replace(hour=hour, minute=minute)
 
     return None
 
