@@ -68,8 +68,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             })
             print(f"📥 Error transcripting!")
             return
+        await reply_to_FE(websocket, 'text', "👋 收到，我已經睇緊你既信息 📩，比少少時間我處理⌛️...")
 
-        print(f"[INFO] Transcription result: {transcription}")
         # --- Step C: Determine if it's a query (about memory)
         is_query = (
             "有冇" in transcription
