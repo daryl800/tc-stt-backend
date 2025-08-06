@@ -84,12 +84,11 @@ TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后朝", "大后晚", "大后日
 TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
-WEEK_PATTERNS = [
-    (r"今星期([一二三四五六日天])", 0),  # this week
-    (r"下星期([一二三四五六日天])", 1),  # next week
-    (r"上星期([一二三四五六日天])", -1),  # last week
-    (r"星期([一二三四五六日天])", 0)     # no modifier — assume this week
-]
+WEEK_PATTERNS = {
+    (r"(今)?星期([一二三四五六日天])", 0),
+    (r"(下)?星期([一二三四五六日天])", 1),
+    (r"(上)?星期([一二三四五六日天])", -1)
+}
 
 WEEKDAY_MAP = {
     "一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5,
