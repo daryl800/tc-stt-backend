@@ -33,26 +33,53 @@ def get_hunyuan_client():
 # Example mappings for normalization
 TRAD_TO_SIMP_REPLACEMENTS = {
     "聽日": "听日",
+    "明日": "听日",
     "聽朝": "听朝",
-    "聽早": "听早",
+    "聽早": "听朝",
     "聽晚": "听晚",
+    "明晚": "听晚",
+    "聽朝早": "听朝",
+    "聽日朝早": "听朝",
+    "聽日中午": "听日中午",
+    "聽日晚上": "听晚",
+    "聽日下午": "听日晏昼",
+    "聽日下昼": "听日晏昼",
+    "聽日晏昼": "听日晏昼",
+
+    "後日": "后日",
+    "後天": "后日",
+    "後朝": "后朝",
+    "後早": "后朝",
+    "後晚": "后晚",
+    "後朝早": "后朝",
+    "後日朝早": "后朝",
+    "後日中午": "后日中午",
+    "後日晚上": "后晚",
+    "後日下午": "后日晏昼",
+    "後日下昼": "后日晏昼",
+    "後日晏昼": "后日晏昼",
+
+    "大後日": "大后日",
+    "大後天": "大后日",
+    "大後日朝": "大后朝",
+    "大後朝早": "大后朝",
+    "大後日朝早": "大后朝",
+    "大後日中午": "大后日中午",
+    "大後晚": "大后晚",
+    "大後日下午": "大后日晏昼",
+    "大後日下昼": "大后日晏昼",
+    "大後日晏昼": "大后日晏昼",
+
     "禮拜": "星期",
     "礼拜": "星期",
-    "後日": "后日",
-    "後天": "后天",
-    "後朝": "后朝",
-    "後早": "后早",
-    "後晚": "后晚",
-    "大後日": "大后日",
-    "大後天": "大后天",
     "個": "",
     "个": ""
 }
 
 # Simplified keyword sets (after normalization)
-TOMORROW_KEYWORDS = {"听日", "听早", "听朝", "听晚", "明日", "明早", "明朝", "明晚"}
-DAY_AFTER_TMR_KEYWORDS = {"后日", "后天", "后早", "后朝", "后晚"}
-TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后天", "大后早", "大后朝", "大后晚"}
+TOMORROW_KEYWORDS = {"听日", "听朝", "听晚", "听日中午"}
+DAY_AFTER_TMR_KEYWORDS = {"后日",  "后朝", "后晚", "后日中午"}
+TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后朝", "大后晚", "大后日中午"}
 TODAY_KEYWORDS = {"今日", "而家", "今天", "现在"}
 
 # Assume these are defined elsewhere
@@ -103,11 +130,11 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
             # Step 3: Determine hour/minute
             hour, minute = 12, 0
-            if "朝早" in text or "上昼" in text or "上午" in text:
+            if "听朝" in text or "后朝" in text or "大后朝" in text:
                 hour = 9
             elif "晏昼" in text or "下昼" in text or "下午" in text:
                 hour = 14
-            elif "夜晚" in text or "晚上" in text:
+            elif "晚" in text:
                 hour = 20
 
             time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
