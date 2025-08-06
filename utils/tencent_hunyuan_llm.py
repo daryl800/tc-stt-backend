@@ -123,9 +123,9 @@ def extract_time(text: str):
 
 def contains_date_keywords(text: str) -> bool:
     all_keywords = (
-        TOMORROW_KEYWORDS +
-        DAY_AFTER_TMR_KEYWORDS +
-        TWO_DAYS_AFTER_TMR_KEYWORDS +
+        TOMORROW_KEYWORDS |
+        DAY_AFTER_TMR_KEYWORDS |
+        TWO_DAYS_AFTER_TMR_KEYWORDS |
         TODAY_KEYWORDS
     )
     return any(kw in text for kw in all_keywords)
