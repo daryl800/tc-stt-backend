@@ -121,7 +121,21 @@ def extract_time(text: str):
     return hour, minute
 
 
+def contains_date_keywords(text: str) -> bool:
+    all_keywords = (
+        TOMORROW_KEYWORDS +
+        DAY_AFTER_TMR_KEYWORDS +
+        TWO_DAYS_AFTER_TMR_KEYWORDS +
+        TODAY_KEYWORDS
+    )
+    return any(kw in text for kw in all_keywords)
+
+
 def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
+    if not contains_date_keywords(text):
+        # No date keywords found
+        return None
+
     if base_date is None:
         base_date = datetime.now()
 
