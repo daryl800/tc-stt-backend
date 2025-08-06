@@ -85,8 +85,8 @@ TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
-    r"(下)?星期([一二三四五六日天])": 1,
     r"(今)?星期([一二三四五六日天])": 0,
+    r"(下)?星期([一二三四五六日天])": 1,
     r"(上)?星期([一二三四五六日天])": -1
 }
 
@@ -109,7 +109,7 @@ def extract_time(text: str):
 
     if "早" in text or "朝" in text or "上昼" in text:
         hour = 9
-    elif "午" in text or "下昼" in text:
+    elif "下午" in text or "下昼" in text:
         hour = 14
     elif "晚" in text:
         hour = 20
