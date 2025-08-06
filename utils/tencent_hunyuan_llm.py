@@ -13,15 +13,6 @@ from config.constants import TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 # Initialize Hunyuan client (singleton pattern)
 _hunyuan_client = None
 
-# def get_hunyuan_client():
-#     global _hunyuan_client
-#     if _hunyuan_client is None:
-#         cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-#         http_profile = HttpProfile(endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
-#         client_profile = ClientProfile(httpProfile=http_profile)
-#         _hunyuan_client = hunyuan_client.HunyuanClient(cred, "ap-hongkong", client_profile)
-#     return _hunyuan_client
-
 
 def get_hunyuan_client():
     global _hunyuan_client
@@ -112,9 +103,9 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[
 
             # Step 3: Determine hour/minute
             hour, minute = 12, 0
-            if "朝早" in text or "上午" in text:
+            if "朝早" in text or "上昼" in text or "上午" in text:
                 hour = 9
-            elif "晏昼" in text or "下午" in text:
+            elif "晏昼" in text or "下昼" in text or "下午" in text:
                 hour = 14
             elif "夜晚" in text or "晚上" in text:
                 hour = 20
@@ -157,13 +148,6 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
             1. Date/Time Handling
             - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
-            - "听日" = tomorrow
-            - "後日" = day after tomorrow
-            - "大後日" = three days later
-            - "今个[weekday]" = this week's [weekday]
-            - "下个[weekday]" = next week's [weekday]
-            - "中午" = 12:00, "晏昼" = 14:00, "晚上"/"夜晚" = 20:00, "朝早"/"上午" = 09:00
-            - Time like "两点半" = 14:30 if in afternoon context
 
             2. Output Format:
             {{
