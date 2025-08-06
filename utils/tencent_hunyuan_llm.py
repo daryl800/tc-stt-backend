@@ -72,6 +72,7 @@ TRAD_TO_SIMP_REPLACEMENTS = {
 
     "禮拜": "星期",
     "礼拜": "星期",
+    "呢": "今",
     "個": "",
     "个": ""
 }
@@ -85,7 +86,7 @@ TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
     r"(下)?星期([一二三四五六日天])": 1,
-    r"今星期([一二三四五六日天])": 0,
+    r"(今)?星期([一二三四五六日天])": 0,
     r"(上)?星期([一二三四五六日天])": -1
 }
 WEEKDAY_MAP = {
