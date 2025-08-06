@@ -99,57 +99,9 @@ def normalize_text(text: str) -> str:
         text = text.replace(trad, simp)
     return text
 
-
-# def calculate_cantonese_date(text: str, base_date: datetime = None) -> Optional[datetime]:
-#     base_date = base_date or datetime.now()
-#     text = normalize_text(text.strip())
-
-#     # Step 1: Relative keywords
-#     if any(kw in text for kw in TOMORROW_KEYWORDS):
-#         return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
-#     elif any(kw in text for kw in DAY_AFTER_TMR_KEYWORDS):
-#         return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
-#     elif any(kw in text for kw in TWO_DAYS_AFTER_TMR_KEYWORDS):
-#         return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
-#     elif any(kw in text for kw in TODAY_KEYWORDS):
-#         return base_date.replace(hour=12, minute=0)
-
-#     # Step 2: Match "星期X" patterns
-#     for pattern, week_offset in WEEK_PATTERNS.items():
-#         match = re.search(pattern, text)
-#         if match:
-#             _, day_char = match.groups()
-#             target_weekday = WEEKDAY_MAP.get(day_char)
-#             if target_weekday is None:
-#                 continue
-
-#             # Find date of that weekday in target week
-#             start_of_week = base_date - timedelta(days=base_date.weekday())
-#             target_date = start_of_week + \
-#                 timedelta(days=target_weekday, weeks=week_offset)
-
-#             # Step 3: Determine hour/minute
-#             hour, minute = 12, 0
-#             if "听朝" in text or "后朝" in text or "大后朝" in text:
-#                 hour = 9
-#             elif "晏昼" in text or "下昼" in text or "下午" in text:
-#                 hour = 14
-#             elif "晚" in text:
-#                 hour = 20
-
-#             time_match = re.search(r'(\d+)(?:点|點)(半)?', text)
-#             if time_match:
-#                 hour = int(time_match.group(1))
-#                 if "下午" in text and hour < 12:
-#                     hour += 12
-#                 if time_match.group(2):  # 半
-#                     minute = 30
-
-#             return target_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-#     return None
-
 # Extract time if mentioned
+
+
 def extract_time(text: str):
     hour, minute = 12, 0  # default noon
 
