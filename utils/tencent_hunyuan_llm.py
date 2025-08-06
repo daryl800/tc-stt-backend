@@ -177,13 +177,13 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
 
     # Group 1: relative dates
     if any(kw in text for kw in TOMORROW_KEYWORDS):
-        return (base_date + timedelta(days=1)).replace(hour=12, minute=0)
+        return (base_date + timedelta(days=1)).replace(hour=hour, minute=minute)
     elif any(kw in text for kw in DAY_AFTER_TMR_KEYWORDS):
-        return (base_date + timedelta(days=2)).replace(hour=12, minute=0)
+        return (base_date + timedelta(days=2)).replace(hour=hour, minute=minute)
     elif any(kw in text for kw in TWO_DAYS_AFTER_TMR_KEYWORDS):
-        return (base_date + timedelta(days=3)).replace(hour=12, minute=0)
+        return (base_date + timedelta(days=3)).replace(hour=hour, minute=minute)
     elif any(kw in text for kw in TODAY_KEYWORDS):
-        return base_date.replace(hour=12, minute=0)
+        return base_date.replace(hour=hour, minute=minute)
 
     # Group 2: weekday (e.g., 星期三)
     weekday_match = re.search(r'星期([一二三四五六日天])', text)
