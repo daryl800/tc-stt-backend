@@ -162,7 +162,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     elif any(kw in text for kw in TODAY_KEYWORDS):
         return base_date.replace(hour=hour, minute=minute)
 
-    for pattern, week_offset in WEEK_PATTERNS:
+    for pattern, week_offset in WEEK_PATTERNS.items():
         match = re.search(pattern, text)
         if match:
             _, day_char = match.groups()
