@@ -68,7 +68,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             })
             print(f"📥 Error transcripting!")
             return
-        await reply_to_FE(websocket, 'text', "👋 收到，我已經睇緊你既信息 📩，比少少時間我處理⌛️...")
+        await reply_to_FE(websocket, 'text', "👋 我已收到你的信息 📩，正在思考中 🤖⏳ ...")
 
         # --- Step C: Determine if it's a query (about memory)
         is_query = (
@@ -95,7 +95,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         # Send inital response ASAP if it is a query
         if is_query:
             initial_tts = base64.b64encode(
-                tencent_tts("等一阵……比少少时间我揾揾～")
+                tencent_tts("💬等一阵...比少少时间我揾揾🔎～")
             ).decode()
             await reply_to_FE(websocket, 'audio', initial_tts)
 
