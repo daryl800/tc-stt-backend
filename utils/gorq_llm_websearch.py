@@ -126,7 +126,7 @@ def web_search(query):
 
     news_items = data.get("news", [])
     snippets = []
-    for i, item in enumerate(news_items[:5]):
+    for i, item in enumerate(news_items[:10]):
         title = item.get("title", "無標題")
         snippet = item.get("snippet", "")
         source_raw = item.get("source", "未知來源")
@@ -308,10 +308,9 @@ def generate_reflection(query: str) -> str:
 
         system_prompt = (
             "你係一個有實時網絡搜索能力嘅助理。"
-            "請嚴格根據用戶提供嘅網絡搜索結果回答，"
-            "不要使用內部知識庫或者過時資料。"
+            "如果有網路搜索結果，請嚴格根據其結果回答，不要使用內部知識庫或者過時資料。"
             "回答要用親切、溫柔嘅粵語語氣，簡短直接，最多200字。"
-            )
+        )
 
         if is_web_search_needed(query):
             print(f"[DEBUG] 現在開始網絡搜索...")
