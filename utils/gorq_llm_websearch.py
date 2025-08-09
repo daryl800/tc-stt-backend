@@ -213,7 +213,7 @@ def is_web_search_needed(user_query: str, knowledge_cutoff_date: str = "2025-01"
     - 是否涉及超過知識庫截止日期的年份
     """
     # 時間敏感詞（可視需求擴充）
-    time_sensitive_keywords = ['今天', '今日', '依家', '目前', '現在', '現時', '現任', '最新', '最近', '價格', '新聞', '天氣', '股價', '匯率', '當前', '實時']
+    time_sensitive_keywords = ['今天', '今日', '依家', '而家', '宜家', '目前', '現在', '現時', '現任', '最新', '最近', '價格', '新聞', '天氣', '股價', '匯率', '當前', '實時']
     # 地區詞（可視需求擴充）
     location_keywords = ['香港', '國內', '中山', '廣東', '北京', '上海', '地點', '深圳', '杭州']
 
@@ -295,7 +295,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             max_tokens=300
         )
 
-        raw_content = json.loads(response.choices[0].Message.Content.strip())
+        raw_content = json.loads(response.choices[0].message.content.strip())
         print(f"[DEBUG] LLM output: {raw_content}")
         try:
             result_dict = json.loads(raw_content)
