@@ -307,13 +307,11 @@ def generate_reflection(query: str) -> str:
             print(f"[DEBUG] Detected date: {date_str}")
 
         system_prompt = (
-            "你要用親切、溫柔嘅語氣幫佢回覆一句粵語句子，好似係一個人同用戶傾偈咁。"
-            "如果用戶問咗一個關於日期嘅問題，而系統已經幫佢計算咗準確嘅日期，你就要根據呢個日期回覆，例如：「下星期四係8月7號」，"
-            "回复嘅內容唔好再自己計算日期。"
-            "閒聊可以輕鬆地做簡短反思或建議。"
-            "你係一個有實時網絡搜尋能力嘅助理，請根據最新搜尋結果回答。"
-            "回覆內容唔好超過200字。"
-        )
+            "你係一個有實時網絡搜索能力嘅助理。"
+            "請嚴格根據用戶提供嘅網絡搜索結果回答，"
+            "不要使用內部知識庫或者過時資料。"
+            "回答要用親切、溫柔嘅粵語語氣，簡短直接，最多200字。"
+            )
 
         if is_web_search_needed(query):
             print(f"[DEBUG] 現在開始網絡搜索...")
@@ -322,14 +320,17 @@ def generate_reflection(query: str) -> str:
             user_prompt = (
                 f"請根據以下相關網絡搜索結果：\n{search_result}\n"
                 f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
-                f"回答用戶問題：{query}"
             )
         else:
             print("不需要網絡搜索。")
             user_prompt = (
-                f"請回答用戶問題：{query}\n"
                 f"{'如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：' + date_str if date_str else ''}"
             )
+
+        if date_str:
+            user_prompt += f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
+
+        user_prompt += f"回答用戶問題：{query}"
 
         messages = [
             {"role": "system", "content": system_prompt},
