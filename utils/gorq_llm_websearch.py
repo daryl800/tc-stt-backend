@@ -11,58 +11,11 @@ GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
 GROQ_LLM_MODEL = "llama-3.1-8b-instant"
 SERPER_URL = "https://google.serper.dev/news"  # Serper News 搜索接口
 
-# Example mappings for normalization
-TRAD_TO_SIMP_REPLACEMENTS = {
-    "聽日": "听日",
-    "明日": "听日",
-    "聽朝": "听朝",
-    "聽早": "听朝",
-    "聽晚": "听晚",
-    "明晚": "听晚",
-    "聽朝早": "听朝",
-    "聽日朝早": "听朝",
-    "聽日中午": "听日中午",
-    "聽日晚上": "听晚",
-    "聽日下午": "听日晏昼",
-    "聽日下昼": "听日晏昼",
-    "聽日晏昼": "听日晏昼",
-
-    "後日": "后日",
-    "後天": "后日",
-    "後朝": "后朝",
-    "後早": "后朝",
-    "後晚": "后晚",
-    "後朝早": "后朝",
-    "後日朝早": "后朝",
-    "後日中午": "后日中午",
-    "後日晚上": "后晚",
-    "後日下午": "后日晏昼",
-    "後日下昼": "后日晏昼",
-    "後日晏昼": "后日晏昼",
-
-    "大後日": "大后日",
-    "大後天": "大后日",
-    "大後日朝": "大后朝",
-    "大後朝早": "大后朝",
-    "大後日朝早": "大后朝",
-    "大後日中午": "大后日中午",
-    "大後晚": "大后晚",
-    "大後日下午": "大后日晏昼",
-    "大後日下昼": "大后日晏昼",
-    "大後日晏昼": "大后日晏昼",
-
-    "禮拜": "星期",
-    "礼拜": "星期",
-    "呢": "今",
-    "個": "",
-    "个": ""
-}
-
 # Simplified keyword sets (after normalization)
-TOMORROW_KEYWORDS = {"听日", "听朝", "听晚", "听日中午"}
-DAY_AFTER_TMR_KEYWORDS = {"后日",  "后朝", "后晚", "后日中午"}
-TWO_DAYS_AFTER_TMR_KEYWORDS = {"大后日", "大后朝", "大后晚", "大后日中午"}
-TODAY_KEYWORDS = {"而家", "现在", "今日", "今天", "今朝", "今晚"}
+TOMORROW_KEYWORDS = {"聽日", "聽朝", "聽晚", "聽日中午"}
+DAY_AFTER_TMR_KEYWORDS = {"後日",  "後朝", "後晚", "後日中午"}
+TWO_DAYS_AFTER_TMR_KEYWORDS = {"大後日", "大後朝", "大後晚", "大後日中午"}
+TODAY_KEYWORDS = {"而家", "依家", "現在", "今日", "今天", "今朝", "今晚"}
 
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
@@ -77,11 +30,6 @@ WEEKDAY_MAP = {
 }
 
 
-def normalize_text(text: str) -> str:
-    for trad, simp in TRAD_TO_SIMP_REPLACEMENTS.items():
-        text = text.replace(trad, simp)
-    return text
-
 # Extract time if mentioned
 
 
@@ -90,7 +38,7 @@ def extract_time(text: str):
 
     if "早" in text or "朝" in text or "上昼" in text:
         hour = 9
-    elif "下午" in text or "下昼" in text:
+    elif "下午" in text or "下昼" in text or "晏昼" in text:
         hour = 14
     elif "晚" in text:
         hour = 20
@@ -105,7 +53,6 @@ def extract_time(text: str):
 
 
 def is_date_related(text: str) -> bool:
-    text = normalize_text(text)
 
     all_keywords = (
         TOMORROW_KEYWORDS |
@@ -340,7 +287,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
 # Example usage
 if __name__ == "__main__":
-    test_text = "提醒我，听日我约咗人食晚饭。"
+    test_text = "提醒我，聽日我约咗人食晚飯。"
     test_base_date = datetime(2025, 7, 21)  # Monday
     calculated = calculate_cantonese_date(test_text, test_base_date)
     print(
