@@ -13,6 +13,7 @@ import tempfile
 from tencentcloud.asr.v20190614 import asr_client, models
 from tencentcloud.common import credential
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
+from opencc import OpenCC
 
 from pydub import AudioSegment
 import asyncio
@@ -70,7 +71,7 @@ async def transcribe_tencent(wav_path: str) -> str:
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-TW",  
+            "EngSerViceType": "16k_ca",  
             "SourceType": 1,
             "VoiceFormat": "wav",
             "UsrAudioKey": str(uuid.uuid4()),
@@ -79,8 +80,10 @@ async def transcribe_tencent(wav_path: str) -> str:
         req.from_json_string(json.dumps(params))
         print("[INFO] Sending transcription request to Tencent ASR...")
         resp = await asyncio.to_thread(client.SentenceRecognition, req)
+        cc = OpenCC('s2t')  # 簡體轉繁體
+        traditional_chinese = cc.convert(resp)
         print(
-            f"[INFO] Transcription result (inside Transcribe_tencent): {resp.Result}")
+            f"[INFO] Transcription result (inside Transcribe_tencent): {traditional_chinese}")
 
         return resp.Result
 
