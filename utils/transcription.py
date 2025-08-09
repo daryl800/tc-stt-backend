@@ -70,7 +70,7 @@ async def transcribe_tencent(wav_path: str) -> str:
         params = {
             "ProjectId": 0,
             "SubServiceType": 2,
-            "EngSerViceType": "16k_zh-PY",  # or "16k_zh-CN" for Cantonese
+            "EngSerViceType": "16k_ca",  
             "SourceType": 1,
             "VoiceFormat": "wav",
             "UsrAudioKey": str(uuid.uuid4()),
