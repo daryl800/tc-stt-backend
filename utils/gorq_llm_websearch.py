@@ -295,7 +295,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             max_tokens=300
         )
 
-        raw_content = response['choices'][0]['message']['content'].strip()
+        raw_content = json.loads(response.Choices[0].Message.Content.strip())
         print(f"[DEBUG] LLM output: {raw_content}")
         try:
             result_dict = json.loads(raw_content)
@@ -396,7 +396,7 @@ def generate_reflection(query: str) -> str:
             max_tokens=300
         )
 
-        result = response['choices'][0]['message']['content'] # for openai/groq sdk
+        result = response.choices[0].message.content.strip()
 
         print(f"[INFO] Reflection: {result}")
         return result
