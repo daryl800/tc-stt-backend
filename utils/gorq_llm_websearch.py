@@ -201,7 +201,7 @@ def web_search(query):
     return search_summary
 
 
-def is_web_search_needed(user_query: str, knowledge_cutoff_date: str = "2024-06") -> bool:
+def is_web_search_needed(user_query: str, knowledge_cutoff_date: str = "2025-01") -> bool:
     """
     根據用戶輸入判斷是否需要啟動網絡搜索。
     
@@ -295,7 +295,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             max_tokens=300
         )
 
-        raw_content = json.loads(response.Choices[0].Message.Content.strip())
+        raw_content = json.loads(response.choices[0].Message.Content.strip())
         print(f"[DEBUG] LLM output: {raw_content}")
         try:
             result_dict = json.loads(raw_content)
@@ -371,6 +371,7 @@ def generate_reflection(query: str) -> str:
 
         # 先使用 Web 搜索 API 獲得資料
         if is_web_search_needed(query):
+            print (f"現在開始網絡搜索 。。。")
             search_result = web_search(query)
             user_prompt = (
                 "請根據以下相關網絡搜索結果：\n"f"{search_result}\n"
@@ -378,6 +379,7 @@ def generate_reflection(query: str) -> str:
                 "回答用戶問題：\n"f"{query}"
             )
         else:
+            print (f"不需要網絡搜索。")
             user_prompt = (
                 "請回答用戶問題：\n"f"{query}"
                 "如果係跟日期有關的：\n"f"\n請適當地加入系統計算的日期，係：{date_str}"
