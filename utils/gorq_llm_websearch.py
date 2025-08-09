@@ -8,7 +8,8 @@ from config.constants import GROQ_API_KEY, SERPER_API_KEY
 import requests
 
 GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
-GROQ_LLM_MODEL = "llama-3.1-8b-instant"
+# GROQ_LLM_MODEL = "llama-3.1-8b-instant"
+GROQ_LLM_MODEL = "compound-beta"
 SERPER_URL = "https://google.serper.dev/news"  # Serper News 搜索接口
 
 # Simplified keyword sets (after normalization)
@@ -310,14 +311,14 @@ def generate_reflection(query: str) -> str:
             "回答要用親切、溫柔嘅粵語語氣，簡短直接，最多200字。"
         )
 
-        if is_web_search_needed(query):
-            print(f"[DEBUG] 現在開始網絡搜索...")
-            search_result = web_search(query)
-            user_prompt = (
-                f"請根據以下相關網絡搜索結果回答：\n{search_result}\n"
-            )
-        else:
-            print("不需要網絡搜索。")
+        # if is_web_search_needed(query):
+        #     print(f"[DEBUG] 現在開始網絡搜索...")
+        #     search_result = web_search(query)
+        #     user_prompt = (
+        #         f"請根據以下相關網絡搜索結果回答：\n{search_result}\n"
+        #     )
+        # else:
+        #     print("不需要網絡搜索。")
 
         if date_str:
             user_prompt += f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
