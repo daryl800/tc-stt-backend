@@ -160,8 +160,9 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
 
 def web_search(query):
 
+    date = datetime.now()
     payload = json.dumps({
-        "q": query,
+        "q": "直到目前為止: {date}" + query,
         "location": "Hong Kong",
         "gl": "cn"
     })
