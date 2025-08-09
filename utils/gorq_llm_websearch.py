@@ -107,11 +107,9 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
 
 def web_search(query):
 
-    date = datetime.now()
     payload = json.dumps({
-        "q": "直到目前為止: {date}" + query,
-        "location": "Hong Kong",
-        "gl": "cn"
+        "q": query,
+        "gl": "Hong Kong"
     })
 
     headers = {
@@ -316,14 +314,10 @@ def generate_reflection(query: str) -> str:
             print(f"[DEBUG] 現在開始網絡搜索...")
             search_result = web_search(query)
             user_prompt = (
-                f"請根據以下相關網絡搜索結果：\n{search_result}\n"
-                f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
+                f"請根據以下相關網絡搜索結果回答：\n{search_result}\n"
             )
         else:
             print("不需要網絡搜索。")
-            user_prompt = (
-                f"{'如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：' + date_str if date_str else ''}"
-            )
 
         if date_str:
             user_prompt += f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
