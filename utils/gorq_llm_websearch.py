@@ -143,7 +143,7 @@ def web_search(query):
 
     search_summary = "\n".join(snippets)
 
-    # print(f"=== 網路搜索摘要 ===\n{search_summary}\n")
+    print(f"=== 網路搜索摘要 ===\n{search_summary}\n")
     return search_summary
 
 
@@ -316,7 +316,6 @@ def generate_reflection(query: str) -> str:
         if is_web_search_needed(query):
             print(f"[DEBUG] 現在開始網絡搜索...")
             search_result = web_search(query)
-            print(f"[DEBUG] 網絡搜索結果：\n{search_result}")
             user_prompt = (
                 f"請根據以下相關網絡搜索結果：\n{search_result}\n"
                 f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
