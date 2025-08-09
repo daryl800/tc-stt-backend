@@ -1,16 +1,14 @@
 from groq import Groq
-from typing import Optional
 from datetime import datetime, timedelta
 import re
 import json
 from models.memory_item import MemoryItem
-from config.constants import GROQ_API_KEY, SERPER_API_KEY
-import requests
+from config.constants import GROQ_API_KEY
+import time
 
 GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
-# GROQ_LLM_MODEL = "llama-3.1-8b-instant"
-GROQ_LLM_MODEL = "compound-beta"
-SERPER_URL = "https://google.serper.dev/news"  # Serper News 搜索接口
+GROQ_LLM_MODEL_318b = "llama-3.1-8b-instant"
+GROQ_LLM_MODEL_WITH_SEARCH = "compound-beta"
 
 # Simplified keyword sets (after normalization)
 TOMORROW_KEYWORDS = {"聽日", "聽朝", "聽晚", "聽日中午"}
@@ -32,14 +30,12 @@ WEEKDAY_MAP = {
 
 
 # Extract time if mentioned
-
-
 def extract_time(text: str):
     hour, minute = 12, 0  # default noon
 
     if "早" in text or "朝" in text or "上昼" in text:
         hour = 9
-    elif "下午" in text or "下昼" in text or "晏昼" in text:
+    elif "下午" in text or "下昼" in text:
         hour = 14
     elif "晚" in text:
         hour = 20
@@ -106,45 +102,6 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
 
     return None
 
-def web_search(query):
-
-    payload = json.dumps({
-        "q": query,
-        "gl": "Hong Kong"
-    })
-
-    headers = {
-        'X-API-KEY': SERPER_API_KEY,
-        'Content-Type': 'application/json'
-    }
-
-    response = requests.post(SERPER_URL, headers=headers, data=payload)
-    response.raise_for_status()
-
-    data = response.json()
-
-    news_items = data.get("news", [])
-    snippets = []
-    for i, item in enumerate(news_items[:10]):
-        title = item.get("title", "無標題")
-        snippet = item.get("snippet", "")
-        source_raw = item.get("source", "未知來源")
-
-        # 判斷 source 欄位型別
-        if isinstance(source_raw, dict):
-            source = source_raw.get("domain", "未知來源")
-        elif isinstance(source_raw, str):
-            source = source_raw
-        else:
-            source = "未知來源"
-
-        snippets.append(f"{i+1}. {title}（來源：{source}）：{snippet}")
-
-    search_summary = "\n".join(snippets)
-
-    print(f"=== 網路搜索摘要 ===\n{search_summary}\n")
-    return search_summary
-
 
 def is_web_search_needed(user_query: str, knowledge_cutoff_date: str = "2025-01") -> bool:
     """
@@ -201,60 +158,65 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             date_str = detected_date.strftime("%Y-%m-%dT%H:%M")
             print(f"[DEBUG] Detected date: {date_str}")
 
+        system_prompt = f""""
+            請從以上輸入「Input」中，精確萃取出該提醒的主要事件內容（mainEvent），
+            mainEvent 必須是來自用戶原文的核心動作，例如「約朋友食晚飯」「記得交功課」「早上開會」，
+            切勿亂生成無關文本、不可增添奇怪字詞或拼湊廢話，只能用用戶語意內容作「精簡重述」。
+            請分析輸入並輸出一個 JSON 物件（第一個字必須是 ，不要輸出其他文字或解釋）。
+            """
+
         user_prompt = f"""
-        [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-        [Detected Date] {date_str if date_str else "None"}
+            [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
+            [Detected Date] {date_str if date_str else "None"}
 
-        Please analyze the following Cantonese input and extract key information.
+            Input:
+            "{text}"
 
-        Input:
-        "{text}"
+            ## Instructions:
 
-        ## Instructions:
+            1. Date/Time Handling
+            - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
 
-        1. Date/Time Handling
-        - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
-
-        2. Output Format:
-        {{
-        "reminderDatetime": "ISO string",
-        "mainEvent": "...",
-        "category": "Reminder",
-        "location": [],
-        "isReminder": true,
-        "isQuery": false,
-        "tags": ["..."]
-        }}
-
-        Only output a single valid JSON object.
-        """
+            2. Output Format:
+            {{
+            "reminderDatetime": "ISO string",
+            "mainEvent": "...",
+            "category": "Reminder",
+            "location": [],
+            "isReminder": true,
+            "isQuery": false,
+            "tags": ["..."]
+            }}
+            """
 
         messages = [
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
 
         response = GROQ_CLIENT.chat.completions.create(
-            model=GROQ_LLM_MODEL,
+            model=GROQ_LLM_MODEL_318b,
             messages=messages,
             temperature=0.7,
             max_tokens=300
         )
 
-        raw_content = json.loads(response.choices[0].message.content.strip())
-        print(f"[DEBUG] LLM output: {raw_content}")
+        raw_content = response.choices[0].message.content.strip()
+        print(f"[DEBUG] Raw LLM output: {raw_content}")
         try:
             result_dict = json.loads(raw_content)
         except Exception as e:
             print(f"[ERROR] JSON parse failed: {e}")
             result_dict = {}
 
-        final_date = date_str if result_dict.get("isReminder") else ""
+
+        reminder_date = date_str if result_dict.get("isReminder") else ""
 
         return MemoryItem(
             category = result_dict.get("category", "General"),
             transcription = text,
             mainEvent = result_dict.get("mainEvent", text.split("。")[0] if "。" in text else text),
-            reminderDatetime = final_date,
+            reminderDatetime = reminder_date,
             isReminder = result_dict.get("isReminder", False),
             isQuery = result_dict.get("isQuery", False),
             location = result_dict.get("location", []) if isinstance(result_dict.get("location", []), list) else [],
@@ -286,15 +248,15 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
 # Example usage
 if __name__ == "__main__":
-    test_text = "提醒我，聽日我约咗人食晚飯。"
-    test_base_date = datetime(2025, 7, 21)  # Monday
-    calculated = calculate_cantonese_date(test_text, test_base_date)
-    print(
-        f"Calculated date: {calculated.strftime('%Y-%m-%d %H:%M') if calculated else 'None'}")
+    test_text = "提醒我，聽晚約左朋友食飯。"
 
+    # ✅ Start timing before sending request
+    start_time = time.time()
     result = extract_info_withLLM(test_text)
-    print(f"Extracted Date: {result.reminderDatetime}")
-    print(f"Main Event: {result.mainEvent}")
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print("回答：", result)
+    print(f"⏱ Time taken: {elapsed:.2f} seconds")
 
 
 def generate_reflection(query: str) -> str:
@@ -307,18 +269,13 @@ def generate_reflection(query: str) -> str:
 
         system_prompt = (
             "你係一個有實時網絡搜索能力嘅助理。"
-            "如果有網路搜索結果，請嚴格根據其結果回答，不要使用內部知識庫或者過時資料。"
-            "回答要用親切、溫柔嘅粵語語氣，簡短直接，最多200字。"
-        )
+            "請嚴格根據網絡搜索結果直接回答，不要使用內部知識庫或者過時資料，也不需要加入其他資訊。"
+            "回答要用親切、溫柔嘅粵語語氣，請以少於200個字回答。"
+            )
 
-        # if is_web_search_needed(query):
-        #     print(f"[DEBUG] 現在開始網絡搜索...")
-        #     search_result = web_search(query)
-        #     user_prompt = (
-        #         f"請根據以下相關網絡搜索結果回答：\n{search_result}\n"
-        #     )
-        # else:
-        #     print("不需要網絡搜索。")
+        user_prompt = (
+                f"{'如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：' + date_str if date_str else ''}"
+            )
 
         if date_str:
             user_prompt += f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
@@ -330,17 +287,32 @@ def generate_reflection(query: str) -> str:
             {"role": "user", "content": user_prompt}
         ]
 
+        use_model = GROQ_LLM_MODEL_WITH_SEARCH if is_web_search_needed else GROQ_LLM_MODEL_318b
+
         response = GROQ_CLIENT.chat.completions.create(
-            model=GROQ_LLM_MODEL,
+            model=use_model,
             messages=messages,
             temperature=0.7,
             max_tokens=300
         )
 
         result = response.choices[0].message.content.strip()
-        print(f"[INFO] Reflection: {result}")
         return result
 
     except Exception as e:
         print(f"[ERROR] Reflection failed: {e}")
         return "我記低咗你講嘅內容啦，有需要可以再問我！"
+
+
+if __name__ == "__main__":
+    # question = "貓一般壽命多長？"
+    # question = "依家嘅美國總統係邊個？"
+    question = "今年中秋節是幾月幾號？"
+
+    # ✅ Start timing before sending request
+    start_time = time.time()
+    answer = generate_reflection(question)
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print("回答：", answer)
+    print(f"⏱ Time taken: {elapsed:.2f} seconds")
