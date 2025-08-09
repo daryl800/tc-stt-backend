@@ -104,7 +104,7 @@ def extract_time(text: str):
     return hour, minute
 
 
-def is_date_realted(text: str) -> bool:
+def is_date_related(text: str) -> bool:
     text = normalize_text(text)
 
     all_keywords = (
@@ -159,8 +159,6 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     return None
 
 def web_search(query):
-
-
 
     payload = json.dumps({
         "q": query,
@@ -248,7 +246,7 @@ def is_web_search_needed(user_query: str, knowledge_cutoff_date: str = "2025-01"
 
 def extract_info_withLLM(text: str) -> MemoryItem:
     try:
-        detected_date = calculate_cantonese_date(text) if is_date_realted(text) else None
+        detected_date = calculate_cantonese_date(text) if is_date_related(text) else None
         print(f"[DEBUG] text pasted in extract_info_withLLM: {text}")
         
         date_str = ""
@@ -354,38 +352,37 @@ if __name__ == "__main__":
 
 def generate_reflection(query: str) -> str:
     try:
-        detected_date = calculate_cantonese_date(query) if is_date_realted(query) else None  
+        detected_date = calculate_cantonese_date(query) if is_date_related(query) else None
 
-        date_str = ""
+        date_str = detected_date.strftime("%Y年%m月%d號") if detected_date else ""
         if detected_date:
-            date_str = detected_date.strftime("%Y年%m月%d號")
             print(f"[DEBUG] Detected date: {date_str}")
 
         system_prompt = (
-            "你是一個有禮貌、友善的粵語AI助理，用戶會以語音說出他想記低嘅嘢，"
-            "如果用戶問咗一個關於日期嘅問題，而系統已經幫佢計算咗準確嘅日期，你就要根據呢個日期回覆，（例如：「下星期四係8月7號」）,回复的内容不需要加入其他东西，"
-            "唔好再自己計算。"
-            "如果用戶係閒聊 → 可以輕鬆地做簡短反思或建議。"
-            "你要用親切、溫柔嘅語氣幫佢回覆一句粵語句子，好似係一個人同佢傾偈咁。"
+            "你要用親切、溫柔嘅語氣幫佢回覆一句粵語句子，好似係一個人同用戶傾偈咁。"
+            "如果用戶問咗一個關於日期嘅問題，而系統已經幫佢計算咗準確嘅日期，你就要根據呢個日期回覆，例如：「下星期四係8月7號」，"
+            "回复嘅內容唔好再自己計算日期。"
+            "閒聊可以輕鬆地做簡短反思或建議。"
+            "你係一個有實時網絡搜尋能力嘅助理，請根據最新搜尋結果回答。"
+            "回覆內容唔好超過200字。"
         )
 
-        # 先使用 Web 搜索 API 獲得資料
         if is_web_search_needed(query):
-            print (f"現在開始網絡搜索 。。。")
+            print(f"[DEBUG] 現在開始網絡搜索...")
             search_result = web_search(query)
+            print(f"[DEBUG] 網絡搜索結果：\n{search_result}")
             user_prompt = (
-                "請根據以下相關網絡搜索結果：\n"f"{search_result}\n"
-                "如果係跟日期有關的：\n"f"\n請適當地加入系統計算的日期，係：{date_str}"
-                "回答用戶問題：\n"f"{query}"
+                f"請根據以下相關網絡搜索結果：\n{search_result}\n"
+                f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
+                f"回答用戶問題：{query}"
             )
         else:
-            print (f"不需要網絡搜索。")
+            print("不需要網絡搜索。")
             user_prompt = (
-                "請回答用戶問題：\n"f"{query}"
-                "如果係跟日期有關的：\n"f"\n請適當地加入系統計算的日期，係：{date_str}"
+                f"請回答用戶問題：{query}\n"
+                f"{'如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：' + date_str if date_str else ''}"
             )
 
-        # 將搜索結果作為上下文傳給 Groq 模型
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -399,7 +396,6 @@ def generate_reflection(query: str) -> str:
         )
 
         result = response.choices[0].message.content.strip()
-
         print(f"[INFO] Reflection: {result}")
         return result
 
