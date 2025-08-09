@@ -7,4 +7,5 @@ LEANCLOUD_APP_ID = os.getenv("LEANCLOUD_APP_ID")
 LEANCLOUD_APP_KEY = os.getenv("LEANCLOUD_APP_KEY")
 LEANCLOUD_MASTER_KEY = os.getenv("LEANCLOUD_MASTER_KEY")  # optional, for admin operations
 
-
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+SERPER_API_KEY = os.getenv("SERPER_API_KEY")
