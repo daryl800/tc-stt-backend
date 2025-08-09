@@ -81,11 +81,11 @@ async def transcribe_tencent(wav_path: str) -> str:
         print("[INFO] Sending transcription request to Tencent ASR...")
         resp = await asyncio.to_thread(client.SentenceRecognition, req)
         cc = OpenCC('s2t')  # 簡體轉繁體
-        traditional_chinese = cc.convert(resp)
+        traditional_text = cc.convert(resp.Result)
         print(
-            f"[INFO] Transcription result (inside Transcribe_tencent): {traditional_chinese}")
+            f"[INFO] Transcription result (inside Transcribe_tencent): {traditional_text}")
 
-        return resp.Result
+        return traditional_text
 
     except TencentCloudSDKException as e:
         return f"[Tencent ASR Error] {str(e)}"
