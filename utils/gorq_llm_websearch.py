@@ -274,13 +274,9 @@ def generate_reflection(query: str) -> str:
             )
 
         user_prompt = (
-                f"{'如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：' + date_str if date_str else ''}"
+                f"如果係跟日期有關嘅：請記住今日日期係：{datetime.now()}"
+                f"回答用戶問題：{query}"
             )
-
-        if date_str:
-            user_prompt += f"如果係跟日期有關嘅：請適當地加入系統計算嘅日期，係：{date_str}\n"
-
-        user_prompt += f"回答用戶問題：{query}"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -297,6 +293,7 @@ def generate_reflection(query: str) -> str:
         )
 
         result = response.choices[0].message.content.strip()
+        print(f"[DEBUG] Reflection result: {result}")
         return result
 
     except Exception as e:
