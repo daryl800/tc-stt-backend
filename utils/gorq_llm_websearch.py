@@ -203,12 +203,17 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
         raw_content = response.choices[0].message.content.strip()
         print(f"[DEBUG] Raw LLM output: {raw_content}")
-        try:
-            result_dict = json.loads(raw_content)
-        except Exception as e:
-            print(f"[ERROR] JSON parse failed: {e}")
-            result_dict = {}
 
+        match = re.search(r'\{[\s\S]*\}', raw_content)
+        if match:
+            try:
+                result_dict = json.loads(match.group())
+            except Exception as e:
+                print(f"[ERROR] JSON parse failed after extraction: {e}")
+                result_dict = {}
+        else:
+            print("[ERROR] No JSON object found in model output.")
+            result_dict = {}
 
         reminder_date = date_str if result_dict.get("isReminder") else ""
 
