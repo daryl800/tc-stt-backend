@@ -88,6 +88,12 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
         base_date = datetime.now()
 
     hour, minute = parse_time(text)
+    print(f"hour: {hour}")
+    print(f"minute: {minute}")
+    if hour is None:
+        return
+    if minute is None:
+        minute = 0
 
     # Group 1: relative dates
     if any(kw in text for kw in TOMORROW_KEYWORDS):
