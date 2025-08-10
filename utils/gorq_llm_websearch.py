@@ -30,22 +30,37 @@ WEEKDAY_MAP = {
 
 
 # Extract time if mentioned
-def extract_time(text: str):
-    hour, minute = 12, 0  # default noon
+# Extract time if mentioned
+def parse_time(text):
+    text = text.strip()
 
-    if "早" in text or "朝" in text or "上昼" in text:
-        hour = 9
-    elif "下午" in text or "下昼" in text or "晏昼" in text:
-        hour = 14
-    elif "晚" in text:
-        hour = 20
+    # Normalize synonyms
+    pm_keywords = ["下午", "下昼", "晚"]
+    am_keywords = ["早", "朝", "上昼"]
 
-    # Find time like 7點, 8點半, 9:15
-    match = re.search(r'(?P<hour>\d{1,2})(點|:)(?P<minute>\d{1,2})?', text)
+    # Regex to match times like "7點", "8點半", "9:15"
+    match = re.search(r'(?P<hour>\d{1,2})(點|:)(?:(?P<minute>\d{1,2})|半)?', text)
+    
     if match:
         hour = int(match.group("hour"))
-        minute = int(match.group("minute")) if match.group("minute") else 0
-
+        
+        if match.group("minute"):
+            minute = int(match.group("minute"))
+        elif "半" in text:
+            minute = 30
+        else:
+            minute = 0
+        
+        if any(k in text for k in pm_keywords) and hour < 12:
+            hour += 12
+    else:
+        if any(k in text for k in am_keywords):
+            hour, minute = 9, 0
+        elif any(k in text for k in pm_keywords):
+            hour, minute = 14, 0
+        else:
+            hour, minute = None, None  # No time found
+    
     return hour, minute
 
 
@@ -72,7 +87,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     if base_date is None:
         base_date = datetime.now()
 
-    hour, minute = extract_time(text)
+    hour, minute = parse_time(text)
 
     # Group 1: relative dates
     if any(kw in text for kw in TOMORROW_KEYWORDS):
