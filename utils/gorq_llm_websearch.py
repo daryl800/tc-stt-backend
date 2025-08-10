@@ -218,7 +218,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
         return MemoryItem(
             category = result_dict.get("category", "General"),
-            catIcon = result_dict.get("catIcon", "📝")
+            catIcon = result_dict.get("catIcon", "📝"),
             transcription = text,
             mainEvent = result_dict.get("mainEvent", text.split("。")[0] if "。" in text else text),
             reminderDatetime = reminder_date,
