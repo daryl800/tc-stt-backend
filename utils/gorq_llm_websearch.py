@@ -11,10 +11,10 @@ GROQ_LLM_MODEL_318b = "llama-3.1-8b-instant"
 GROQ_LLM_MODEL_WITH_SEARCH = "compound-beta"
 
 # Simplified keyword sets (after normalization)
-TOMORROW_KEYWORDS = {"聽日", "聽朝", "聽晚", "聽日中午"}
-DAY_AFTER_TMR_KEYWORDS = {"後日",  "後朝", "後晚", "後日中午"}
-TWO_DAYS_AFTER_TMR_KEYWORDS = {"大後日", "大後朝", "大後晚", "大後日中午"}
-TODAY_KEYWORDS = {"而家", "依家", "現在", "今日", "今天", "今朝", "今晚"}
+TOMORROW_KEYWORDS = {"聽日", "聽朝", "聽晚", "聽日中午", "聽日晚上", "明日", "明朝", "明晚", "明日中午", "聽日晚上" }
+DAY_AFTER_TMR_KEYWORDS = {"後日",  "後朝", "後晚", "後日中午", "後日晚上"}
+TWO_DAYS_AFTER_TMR_KEYWORDS = {"大後日", "大後朝", "大後晚", "大後日中午", "大後日晚上"}
+TODAY_KEYWORDS = {"而家", "依家", "現在", "今日", "今天", "今朝", "今晚", "今日中午", "今日晚上"}
 
 # Assume these are defined elsewhere
 WEEK_PATTERNS = {
@@ -158,35 +158,31 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             date_str = detected_date.strftime("%Y-%m-%dT%H:%M")
             print(f"[DEBUG] Detected date: {date_str}")
 
-        system_prompt = f""""
-            請從以上輸入「Input」中，精確萃取出該提醒的主要事件內容（mainEvent），
-            mainEvent 必須是來自用戶原文的核心動作，例如「約朋友食晚飯」「記得交功課」「早上開會」，
-            切勿亂生成無關文本、不可增添奇怪字詞或拼湊廢話，只能用用戶語意內容作「精簡重述」。
-            請分析輸入並輸出一個 JSON 物件（第一個字必須是 ，不要輸出其他文字或解釋）。
-            """
+        system_prompt = f"""
+            你是一個信息抽取助手，專門從用戶的自然語言輸入中，提取主要事件（mainEvent）。
 
-        user_prompt = f"""
-            [Current Date] {datetime.now().strftime("%Y-%m-%d (%A)")}
-            [Detected Date] {date_str if date_str else "None"}
+            規則：
+            1. mainEvent 必須完整反映用戶輸入中的核心內容，可以是行動、任務、事件、或者查詢的主題。
+            2. 如果是查詢問題（如「最近颱風路徑係點？」），mainEvent 應該是該查詢的主題（例如「楊柳颱風路徑」）。
+            3. mainEvent 必須直接取材於用戶原文，可適度精簡或改成短語，但不得加入原文不存在的資訊。
+            4. mainEvent 絕不能留空，即使輸入只是閒聊，也要提取主要話題。
+            5. 嚴格輸出 JSON 格式，不能有多餘文字。
 
-            Input:
-            "{text}"
-
-            ## Instructions:
-
-            1. Date/Time Handling
-            - Use the "[Detected Date]" if provided. Do NOT guess or change the date unless the input text clearly contradicts it.
-
-            2. Output Format:
+            輸出格式：
             {{
-            "reminderDatetime": "ISO string",
-            "mainEvent": "...",
-            "category": "Reminder",
-            "location": [],
-            "isReminder": true,
-            "isQuery": false,
-            "tags": ["..."]
+                "reminderDatetime": "ISO string",
+                "mainEvent": "...",
+                "category": "Reminder" 或 "General",
+                "location": [],
+                "isReminder": true/false,
+                "isQuery": true/false,
+                "tags": ["..."]
             }}
+            """
+        
+        user_prompt = f"""
+            Text: {text}
+            Return the extracted event as JSON only.
             """
 
         messages = [
@@ -253,11 +249,11 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
 # Example usage
 if __name__ == "__main__":
-    test_text = "提醒我，聽晚約左朋友食飯。"
+    user_msg = "提醒我，聽晚約左朋友食飯。"
 
     # ✅ Start timing before sending request
     start_time = time.time()
-    result = extract_info_withLLM(test_text)
+    result = extract_info_withLLM(user_msg)
     end_time = time.time()
     elapsed = end_time - start_time
     print("回答：", result)
@@ -309,14 +305,14 @@ def generate_reflection(query: str) -> str:
 
 
 if __name__ == "__main__":
-    # question = "貓一般壽命多長？"
-    # question = "依家嘅美國總統係邊個？"
-    question = "今年中秋節是幾月幾號？"
+    # user_msg = "貓一般壽命多長？"
+    # user_msg = "依家嘅美國總統係邊個？"
+    user_msg = "今年中秋節是幾月幾號？"
 
     # ✅ Start timing before sending request
     start_time = time.time()
-    answer = generate_reflection(question)
+    result = generate_reflection(user_msg)
     end_time = time.time()
     elapsed = end_time - start_time
-    print("回答：", answer)
+    print("回答：", result)
     print(f"⏱ Time taken: {elapsed:.2f} seconds")
