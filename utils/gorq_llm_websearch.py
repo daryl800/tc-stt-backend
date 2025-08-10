@@ -183,7 +183,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             4. mainEvent 絕不能留空，即使輸入只是閒聊，也要提取主要話題。
             5. category 為以下類別的其中一類：一般、家庭、健康、醫療、運動、旅遊、工作、學習、音樂、娛樂、約會、重要、危險 或 任務。
             6. categoryIcon 必須完全反映(category)，並以適當(emoji)代表，
-            7. 例如：若category是與藥物有關的內容，其(categoryIcon)應該為💊，絕不能留空。
+            7. 若category是與藥物有關的內容，其(categoryIcon)應該為💊，絕不能留空。
             8. tags 為 mainEvent 裏的重要字眼。
             9. 嚴格輸出 JSON 格式，不能有多餘文字。
 
