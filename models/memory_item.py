@@ -5,7 +5,7 @@ from datetime import datetime
 
 class MemoryItem(BaseModel):
     category: str = "General"
-    catIcon: str
+    categoryIcon: str
     transcription: str
     mainEvent: str
     reminderDatetime: str = ""
