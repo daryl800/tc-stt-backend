@@ -30,4 +30,4 @@ async def audio_sending_loop():
             await asyncio.sleep(0.3)  # To avoid overlap
         except Exception as e:
             print(f"[ERROR] Failed to send audio: {e}")
-        audio_queue.task_done()
+        audio_queue.task_done() 
