@@ -166,15 +166,16 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             2. 如果是查詢問題（如「最近颱風路徑係點？」），mainEvent 應該是該查詢的主題（例如「楊柳颱風路徑」）。
             3. mainEvent 必須直接取材於用戶原文，可適度精簡或改成短語，但不得加入原文不存在的資訊。
             4. mainEvent 絕不能留空，即使輸入只是閒聊，也要提取主要話題。
-            5. 請把主題分類成 （category)：一般、家庭、健康、醫療、運動、旅遊、工作、學習、音樂、娛樂、約會、重要、危險和任務，並配上適當的emoji。
-            6. 如果category是與藥物有關，請用這個💊代表。
+            5. 請把主題分類成 （category)：一般、家庭、健康、醫療、運動、旅遊、工作、學習、音樂、娛樂、約會、重要、危險和任務。
+            6. 請根據（category）分配一個合適的（emoji）給(catIcon)，如（category）是與藥物有關的，其(catIcon)應該為💊。
             7. 嚴格輸出 JSON 格式，不能有多餘文字。
 
             輸出格式：
             {{
                 "reminderDatetime": "ISO string",
                 "mainEvent": "...",
-                "category": "emoji",
+                "category": "...",
+                "catIcon": "",
                 "location": [],
                 "isReminder": true/false,
                 "isQuery": true/false,
@@ -217,6 +218,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
 
         return MemoryItem(
             category = result_dict.get("category", "General"),
+            catIcon = result_dict.get("catIcon", "📝")
             transcription = text,
             mainEvent = result_dict.get("mainEvent", text.split("。")[0] if "。" in text else text),
             reminderDatetime = reminder_date,
@@ -235,6 +237,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
         print(f"[ERROR] LLM extraction failed: {e}")
         return MemoryItem(
             category = "General",
+            catIcon = "📝",
             transcription = text,
             mainEvent = text.split("。")[0] if "。" in text else text,
             reminderDatetime = "",
