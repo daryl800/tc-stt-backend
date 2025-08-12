@@ -39,6 +39,8 @@ def parse_time(text):
     # Normalize synonyms
     pm_keywords = ["下午", "下昼", "晚"]
     am_keywords = ["早", "朝", "上昼"]
+    noon_keywords = ["中午"]
+    midnight_keywords = ["午夜", "凌晨"]
 
     # Regex to match times like "7點", "8點半", "9:15"
     match = re.search(r'(?P<hour>\d{1,2})(點|:)(?:(?P<minute>\d{1,2})|半)?', text)
@@ -60,6 +62,10 @@ def parse_time(text):
             hour, minute = 9, 0
         elif any(k in text for k in pm_keywords):
             hour, minute = 14, 0
+        elif any(k in text for k in noon_keywords):
+            hour, minute = 12, 0
+        elif any(k in text for k in midnight_keywords):
+            hour, minute = 0, 0
         else:
             hour, minute = None, None  # No time found
     
