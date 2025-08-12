@@ -5,7 +5,7 @@ import dashscope
 from groq import Groq
 from datetime import datetime, timedelta
 from models.memory_item import MemoryItem
-from config.constants import GROQ_API_KEY, ALI_API_KEY
+from config.constants import GROQ_API_KEY, ALI_CLOUD_API_KEY
 
 GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
 GROQ_LLM_MODEL_318b = "llama-3.1-8b-instant"
@@ -188,7 +188,7 @@ def extract_info_withLLM(text: str) -> MemoryItem:
             print(f"[DEBUG] Detected date: {date_str}")
 
         # Initialize DashScope (Tongyi Qianwen)
-        dashscope.api_key = ALI_API_KEY
+        dashscope.api_key = ALI_CLOUD_API_KEY
 
         system_prompt = f"""
             你是一個信息抽取助手，專門從用戶的自然語言輸入中，提取主要事件（mainEvent）。
