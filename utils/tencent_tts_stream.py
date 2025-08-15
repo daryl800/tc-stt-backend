@@ -8,11 +8,11 @@ import wave
 import time
 import base64
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from common import credential
+import credential
 import speech_synthesizer_ws
 from log import logger
 from utils import is_python3
-from utils.comm_utils import enqueue_audio
+from comm_utils import enqueue_audio
 
 # Add parent directory of utils
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
