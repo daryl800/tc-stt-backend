@@ -8,8 +8,8 @@ import wave
 import time
 import base64
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import credential
-import speech_synthesizer_ws
+from credential import Credential
+from speech_synthesizer_ws import SpeechSynthesizer
 from log import logger
 from utils import is_python3
 from comm_utils import enqueue_audio
@@ -137,8 +137,8 @@ class MySpeechSynthesisListener(speech_synthesizer_ws.SpeechSynthesisListener):
 def process_tts_stream(text, fe_websocket, id=1):
     logger.info("process start: idx={} text={}".format(id, text))
     listener = MySpeechSynthesisListener(id, CODEC, SAMPLE_RATE, fe_websocket)
-    credential_var = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-    synthesizer = speech_synthesizer_ws.SpeechSynthesizer(
+    credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+    synthesizer = SpeechSynthesizer(
         TENCENT_APP_ID, credential_var, listener)
     synthesizer.set_text(text)
     synthesizer.set_voice_type(VOICETYPE)
