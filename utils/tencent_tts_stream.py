@@ -9,7 +9,7 @@ import time
 import base64
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from credential import Credential
-from speech_synthesizer_ws import SpeechSynthesizer
+from speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from log import logger
 from utils import is_python3
 from comm_utils import enqueue_audio
@@ -25,7 +25,7 @@ SAMPLE_RATE = 16000 # 音频采样率：8000/16000
 ENABLE_SUBTITLE = True
 
 
-class MySpeechSynthesisListener(speech_synthesizer_ws.SpeechSynthesisListener):
+class MySpeechSynthesisListener(SpeechSynthesisListener):
     
     def __init__(self, id, codec, sample_rate, fe_websocket):
         self.start_time = time.time()
