@@ -14,6 +14,7 @@ from utils.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflectio
 from utils.db_utils import save_to_leancloud_async
 # assuming you placed the function here
 from utils.query_memory import search_past_events
+from utils.tencent_tts_stream import process_tts_stream
 from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
 from utils.comm_utils import reply_to_FE, enqueue_audio
 from utils.filler_utils import pick_random_filler
@@ -107,7 +108,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
         try:
             # 只等 reflection，立刻啟動 TTS
             reflection = await reflection_task
-            reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
+            # reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
+            reflection_tts_task = asyncio.to_thread(process_tts_stream, reflection)
 
             # 這時 extract_task 可能還沒跑完，沒關係
             extraction = await extract_task
@@ -188,11 +190,13 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             await reply_to_FE(websocket, 'obj', response_dict)
             # Default response for non-query cases
             # Then wait for the TTS result when ready to send
-            reflection_tts_bytes = await reflection_tts_task
-            reflection_tts_wav = base64.b64encode(
-                reflection_tts_bytes).decode()
-            print(f"[DEBUG] Sending back reflection in voice ...")
-            await enqueue_audio(websocket, reflection_tts_wav)
+            
+            ### comment out the following code which was used to run one sentence tts
+            # reflection_tts_bytes = await reflection_tts_task
+            # reflection_tts_wav = base64.b64encode(
+            #     reflection_tts_bytes).decode()
+            # print(f"[DEBUG] Sending back reflection in voice ...")
+            # await enqueue_audio(websocket, reflection_tts_wav)
 
     except Exception as e:
         print(f"[ERROR] TTS or extraction failed: {e}")
