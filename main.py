@@ -9,7 +9,7 @@ from datetime import datetime
 from pydub import AudioSegment
 from dateutil import parser
 from fastapi import WebSocket
-from utils.text_to_speech import tencent_tts, group_segments_by_limit
+from utils.tencent_tts_short import tencent_tts, group_segments_by_limit
 from utils.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflection
 from utils.db_utils import save_to_leancloud_async
 # assuming you placed the function here
