@@ -1,6 +1,6 @@
 # filler.py
 import random
-from utils.tencent_tts_short import tencent_tts
+from tts.tencent_tts_short import tencent_tts
 
 # FILLER_LIST = ["嗯", "好吖", "等陣", "噉我睇吓", "畀啲時間我"]
 FILLER_LIST = [
