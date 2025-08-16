@@ -7,15 +7,15 @@ import sys
 import wave
 import time
 import base64
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
-from log import logger
-from utils import is_python3
-from comm_utils import enqueue_audio
+from concurrent.futures import as_completed
+from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
+from utils.log import logger
+from utils.chk_version import is_python3
+from utils.comm_utils import enqueue_audio
 from utils.credential import Credential
 
 # Add parent directory of utils
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from config.constants import TENCENT_APP_ID ,TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 VOICETYPE = 101001 # 音色类型

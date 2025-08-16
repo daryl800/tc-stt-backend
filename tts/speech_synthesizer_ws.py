@@ -9,14 +9,12 @@ import threading
 from websocket import ABNF, WebSocketApp
 import uuid
 import urllib
-from log import logger
-
+from utils.log import logger
 
 _PROTOCOL = "wss://"
 _HOST = "tts.cloud.tencent.com"
 _PATH = "/stream_ws"
 _ACTION = "TextToStreamAudioWS"
-
 
 class SpeechSynthesisListener(object):
     '''

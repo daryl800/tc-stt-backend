@@ -9,17 +9,15 @@ from datetime import datetime
 from pydub import AudioSegment
 from dateutil import parser
 from fastapi import WebSocket
-from utils.tencent_tts_short import tencent_tts, group_segments_by_limit
-from utils.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflection
-from utils.db_utils import save_to_leancloud_async
-# assuming you placed the function here
-from utils.query_memory import search_past_events
-from utils.tencent_tts_stream import process_tts_stream
-from utils.transcription import webm_bytes_to_wav_path, transcribe_tencent
+from fastapi.encoders import jsonable_encoder
+from tts.tencent_tts_short import tencent_tts, group_segments_by_limit
+from llm.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflection
+from db.db_utils import save_to_leancloud_async
+from db.query_memory import search_past_events
+from tts.tencent_tts_stream import process_tts_stream
+from asr.transcription import webm_bytes_to_wav_path, transcribe_tencent
 from utils.comm_utils import reply_to_FE, enqueue_audio
 from utils.filler_utils import pick_random_filler
-from fastapi.encoders import jsonable_encoder
-
 
 def extract_info_with_timing(transcription):
     start = time.time()
@@ -28,14 +26,12 @@ def extract_info_with_timing(transcription):
         time.time() - start, 2), "seconds")
     return result
 
-
 def generate_reflection_with_timing(transcription):
     start = time.time()
     result = generate_reflection(transcription)
     print("[DEBUG] LLM generate_reflection took",
           round(time.time() - start, 2), "seconds")
     return result
-
 
 async def transcribe_workflow(base64_audio_str: str):
     audio_bytes = base64.b64decode(base64_audio_str)
@@ -45,7 +41,6 @@ async def transcribe_workflow(base64_audio_str: str):
     transcription = await transcribe_tencent(wav_path)
     os.remove(wav_path)
     return transcription, wav_bytes
-
 
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     try:

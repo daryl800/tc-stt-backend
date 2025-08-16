@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
-from transcribe import transcribe_sync
 from fastapi.concurrency import run_in_threadpool
+from transcribe import transcribe_sync
 import traceback
 import logging
 

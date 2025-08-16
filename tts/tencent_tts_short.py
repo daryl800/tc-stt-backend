@@ -6,7 +6,6 @@ import re
 
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common import credential
-from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
 
 
 # Add parent directory of utils
