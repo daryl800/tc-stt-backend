@@ -44,6 +44,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         '''
         session_id: 请求session id，类型字符串
         '''
+        print(f"[DEBUG] TTS ws session id: {session_id}")
         super().on_synthesis_start(session_id)
         
         # TODO 合成开始，添加业务逻辑
@@ -74,11 +75,15 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
                 self.codec
             ))
 
+        print(f"[DEBUG] audio_bytes arrived")    
+
     def on_audio_result(self, audio_bytes):
         '''
         audio_bytes: 二进制音频，类型 bytes
         '''
         super().on_audio_result(audio_bytes)
+
+        print(f"[DEBUG] 合成结束。")
         
         # ① Append to your local buffer (optional — only if you want full WAV after)
         self.audio_data += audio_bytes
@@ -132,6 +137,8 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         # TODO 合成失败，添加错误处理逻辑
         err_code = response["code"]
         err_msg = response["message"]
+
+        print(f"[ERROR] err_msg: {err_msg}, err_code: {err_code}")
         
 
 def process_tts_stream(text, fe_websocket, id=1):
