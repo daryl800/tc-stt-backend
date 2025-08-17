@@ -77,7 +77,8 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
                 self.codec
             ))
 
-        print(f"[DEBUG] audio_bytes arrived")    
+        print(f"[DEBUG] 合成结束。")
+           
 
     def on_audio_result(self, audio_bytes):
         '''
@@ -85,14 +86,14 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         '''
         super().on_audio_result(audio_bytes)
 
-        print(f"[DEBUG] 合成结束。")
+        print(f"[DEBUG] audio_bytes arrived") 
         
         # ① Append to local buffer (optional)
         self.audio_data += audio_bytes
 
         # ② Encode to base64 and push to frontend safely
         b64_audio = base64.b64encode(audio_bytes).decode()
-        
+
         # Schedule coroutine on main loop thread safely
         MAIN_LOOP.call_soon_threadsafe(
             asyncio.create_task,
