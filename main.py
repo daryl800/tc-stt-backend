@@ -104,7 +104,7 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             # 只等 reflection，立刻啟動 TTS
             reflection = await reflection_task
             # reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
-            await asyncio.to_thread(process_tts_stream, reflection, websocket)
+            await asyncio.to_thread(process_tts_stream, reflection)
 
             # 這時 extract_task 可能還沒跑完，沒關係
             extraction = await extract_task

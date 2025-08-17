@@ -90,7 +90,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
 
         # ② Immediately push this chunk to your frontend (streaming)
         b64 = base64.b64encode(audio_bytes).decode()
-        asyncio.create_task(enqueue_audio(self.websocket, b64))
+        asyncio.create_task(enqueue_audio(self.fe_websocket, b64))
 
     def on_text_result(self, response):
         '''
