@@ -24,6 +24,8 @@ CODEC = "pcm" # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000 # 音频采样率：8000/16000
 ENABLE_SUBTITLE = True
 
+# Capture main asyncio loop once at backend startup
+MAIN_LOOP = asyncio.get_event_loop()
 
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     
@@ -85,12 +87,17 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
 
         print(f"[DEBUG] 合成结束。")
         
-        # ① Append to your local buffer (optional — only if you want full WAV after)
+        # ① Append to local buffer (optional)
         self.audio_data += audio_bytes
 
-        # ② Immediately push this chunk to your frontend (streaming)
-        b64 = base64.b64encode(audio_bytes).decode()
-        asyncio.create_task(enqueue_audio(self.fe_websocket, b64))
+        # ② Encode to base64 and push to frontend safely
+        b64_audio = base64.b64encode(audio_bytes).decode()
+        
+        # Schedule coroutine on main loop thread safely
+        MAIN_LOOP.call_soon_threadsafe(
+            asyncio.create_task,
+            enqueue_audio(self.fe_websocket, b64_audio)
+        )
 
     def on_text_result(self, response):
         '''
