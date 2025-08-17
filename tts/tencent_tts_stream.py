@@ -142,6 +142,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         
 
 def process_tts_stream(text, fe_websocket, id=1):
+    print(f"[DEBUG] process text thru stream: {text}")
     logger.info("process start: idx={} text={}".format(id, text))
     listener = MySpeechSynthesisListener(id, CODEC, SAMPLE_RATE, fe_websocket)
     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
