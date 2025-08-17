@@ -30,14 +30,13 @@ MAIN_LOOP = asyncio.get_event_loop()
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     
     def __init__(self, id, codec, sample_rate, fe_websocket):
-        self.start_time = time.time()
+        super().__init__()
         self.id = id
-        self.codec = codec.lower()
+        self.codec = codec
         self.sample_rate = sample_rate
         self.fe_websocket = fe_websocket
-
+        self.audio_data = b''
         self.audio_file = ""
-        self.audio_data = bytes()
     
     def set_audio_file(self, filename):
         self.audio_file = filename
@@ -81,24 +80,15 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
            
 
     def on_audio_result(self, audio_bytes):
-        '''
-        audio_bytes: 二进制音频，类型 bytes
-        '''
-        super().on_audio_result(audio_bytes)
-
-        print(f"[DEBUG] audio_bytes arrived") 
-        
-        # ① Append to local buffer (optional)
+        # use your enqueue_audio here
+        b64_chunk = base64.b64encode(audio_bytes).decode()
+        asyncio.get_running_loop().call_soon_threadsafe(
+            asyncio.create_task, enqueue_audio(self.fe_websocket, b64_chunk)
+        )
         self.audio_data += audio_bytes
 
-        # ② Encode to base64 and push to frontend safely
-        b64_audio = base64.b64encode(audio_bytes).decode()
-
-        # Schedule coroutine on main loop thread safely
-        MAIN_LOOP.call_soon_threadsafe(
-            asyncio.create_task,
-            enqueue_audio(self.fe_websocket, b64_audio)
-        )
+    def on_synthesis_complete(self, session_id):
+        print(f"[INFO] Synthesis complete: {session_id}")
 
     def on_text_result(self, response):
         '''
