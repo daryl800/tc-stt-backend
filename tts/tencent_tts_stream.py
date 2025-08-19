@@ -10,7 +10,7 @@ import re
 from utils.log import logger
 # from utils.chk_version import is_python3
 from utils.comm_utils import enqueue_audio
-# from utils.credential import Credential
+#from utils.credential import Credential
 
 # Add parent directory of utils
 # sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -154,53 +154,98 @@ def split_sentences(text: str):
 
 
 #######################################
+# -*- coding: utf-8 -*-
 import asyncio
+import sys
+import re
 import base64
+import json
 from concurrent.futures import ThreadPoolExecutor
-from tencentcloud.tts.v20190823 import models
-import tencentcloud.tts.v20190823.tts_client as tts_client
+from tencentcloud.common import credential
+from tencentcloud.common.profile.client_profile import ClientProfile
+from tencentcloud.tts.v20190823 import tts_client, models
+from utils.log import logger
+from utils.chk_version import is_python3
+from utils.comm_utils import enqueue_audio
 
-# Initialize ThreadPoolExecutor
+# Add parent directory of utils
+# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
+
+VOICETYPE = 101001  # 音色类型
+CODEC = "pcm"  # 音频格式：pcm/mp3
+SAMPLE_RATE = 16000  # 音频采样率：8000/16000
+
+# Thread pool for handling TTS requests
 executor = ThreadPoolExecutor(max_workers=5)
 
 class AsyncTTSHandler:
     def __init__(self, app_id, secret_id, secret_key):
-        self.client = tts_client.TtsClient(
-            models.Credential(secret_id=secret_id, secret_key=secret_key),
-            region="ap-guangzhou"
-        )
+        # Initialize credentials
+        cred = credential.Credential(secret_id, secret_key)
+        # Initialize client profile
+        client_profile = ClientProfile()
+        client_profile.httpProfile.endpoint = "tts.tencentcloudapi.com"
+        
+        # Initialize TTS client
+        self.client = tts_client.TtsClient(cred, "ap-guangzhou", client_profile)
         self.app_id = app_id
 
     async def synthesize(self, text, fe_websocket):
         def _run_tts():
-            req = models.TextToVoiceRequest()
-            req.AppId = self.app_id
-            req.Text = text
-            req.VoiceType = VOICETYPE
-            req.Codec = CODEC
-            req.SampleRate = SAMPLE_RATE
-            
-            response = self.client.TextToVoice(req)
-            return base64.b64encode(response.Audio).decode()
+            try:
+                req = models.TextToVoiceRequest()
+                req.AppId = self.app_id
+                req.Text = text
+                req.VoiceType = VOICETYPE
+                req.Codec = CODEC
+                req.SampleRate = SAMPLE_RATE
+                
+                # Call the Tencent TTS API
+                response = self.client.TextToVoice(req)
+                return base64.b64encode(response.Audio).decode()
+            except Exception as e:
+                logger.error(f"TTS synthesis error: {e}")
+                return None
 
         # Offload TTS to thread pool
         b64_audio = await asyncio.get_event_loop().run_in_executor(
             executor, _run_tts
         )
         
-        # Send audio via WebSocket in main event loop
-        logger.info("penqueue_audio ...")
-        # await self._send_audio(fe_websocket, b64_audio)
-        await enqueue_audio(fe_websocket, b64_audio)
+        if b64_audio:
+            # Send audio via WebSocket
+            # await self._send_audio(fe_websocket, b64_audio)
+            await enqueue_audio(fe_websocket, b64_audio)
 
     async def _send_audio(self, websocket, audio_data):
-        if not websocket.closed:
-            await websocket.send_text(audio_data)
+        try:
+            if not websocket.closed:
+                await websocket.send_text(json.dumps({
+                    "type": "audio",
+                    "data": audio_data
+                }))
+        except Exception as e:
+            logger.warning(f"Failed to send audio: {e}")
+
+def split_sentences(text: str):
+    """
+    Split Chinese / English text into sentences based on common punctuation.
+    """
+    # Define Chinese and English sentence enders
+    pattern = r'[。！？.!?\n]+'
+    # Split & clean
+    sentences = re.split(pattern, text)
+    return [s.strip() for s in sentences if s.strip()]
 
 async def process_tts_stream(full_text, fe_websocket):
-    logger.info("process_tts_stream {}".format(full_text))
+    logger.info(f"Processing TTS stream: {full_text}")
     handler = AsyncTTSHandler(TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
     sentences = split_sentences(full_text)
     
+    # Process sentences sequentially
     for idx, sentence in enumerate(sentences):
         await handler.synthesize(sentence, fe_websocket)
+        logger.info(f"Processed sentence {idx}: {sentence}")
+
+# Rest of your code remains the same...
