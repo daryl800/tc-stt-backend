@@ -25,122 +25,208 @@ ENABLE_SUBTITLE = True
 # Capture main asyncio loop once at backend startup
 MAIN_LOOP = asyncio.get_event_loop()
 
-async def send_safe(fe_ws, b64_audio):
-    """Safely enqueue audio to FE websocket in async loop."""
+# async def send_safe(fe_ws, b64_audio):
+#     """Safely enqueue audio to FE websocket in async loop."""
+#     try:
+#         if not fe_ws.client_state.closed:
+#             await enqueue_audio(fe_ws, b64_audio)
+#     except Exception as e:
+#         logger.warning(f"Skipping send, WS closed or error: {e}")
+
+# class MySpeechSynthesisListener(SpeechSynthesisListener):
+    
+#     def __init__(self, id, codec, sample_rate, fe_websocket):
+#         super().__init__()
+#         self.id = id
+#         self.codec = codec
+#         self.sample_rate = sample_rate
+#         self.fe_websocket = fe_websocket
+#         self.audio_data = b''
+#         self.audio_file = ""
+
+#     def set_audio_file(self, filename):
+#         self.audio_file = filename
+
+#     def on_synthesis_start(self, session_id):
+#         print(f"[DEBUG] TTS ws session id: {session_id}")
+#         super().on_synthesis_start(session_id)
+#         if not self.audio_file:
+#             self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
+#         self.audio_data = b''
+
+#     def on_audio_result(self, audio_bytes):
+#         super().on_audio_result(audio_bytes)
+#         self.audio_data += audio_bytes  # accumulate
+
+#     def on_synthesis_end(self):
+#         super().on_synthesis_end()
+#         b64_audio = base64.b64encode(self.audio_data).decode()
+#         # enqueue audio safely in main event loop
+#         asyncio.run_coroutine_threadsafe(send_safe(self.fe_websocket, b64_audio), MAIN_LOOP)
+#         logger.info(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
+
+#     def on_synthesis_fail(self, response):
+#         super().on_synthesis_fail(response)
+#         err_code = response.get("code", "N/A")
+#         err_msg = response.get("message", "")
+#         print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
+
+# async def process_sentence(text, sentence_id, fe_websocket):
+#     print(f"[DEBUG] process text thru stream: {text}")
+#     logger.info("process start: idx={} text={}".format(sentence_id, text))
+#     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
+#     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+#     synthesizer = SpeechSynthesizer(
+#         TENCENT_APP_ID, credential_var, listener)
+#     synthesizer.set_text(text)
+#     synthesizer.set_voice_type(VOICETYPE)
+#     synthesizer.set_codec(CODEC)
+#     synthesizer.set_sample_rate(SAMPLE_RATE)
+#     synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
+#     synthesizer.set_fast_voice_type(FASTVOICETYPE)
+    
+#     synthesizer.start()
+#     # wait for processing complete
+#     synthesizer.wait()
+
+#     logger.info("process done: idx={} text={}".format(sentence_id, text))
+
+
+# def split_sentences(text: str):
+#     """
+#     Split Chinese / English text into sentences based on common punctuation.
+#     """
+#     # Define Chinese and English sentence enders
+#     pattern = r'[。！？.!?\n]+'
+#     # Split & clean
+#     sentences = re.split(pattern, text)
+#     return [s.strip() for s in sentences if s.strip()]
+
+
+# async def process_tts_stream(full_text, fe_websocket):
+#     sentences = split_sentences(full_text)
+#     for idx, sentence in enumerate(sentences):
+#         await process_sentence(sentence, idx, fe_websocket)
+
+# def read_tts_text():
+#     lines_list = []
+#     with open('tts_text.txt', 'r', encoding='utf-8') as file:
+#         for line in file:
+#             lines_list.append(line.strip())
+#     # print("total read {} lines".format(len(lines_list)))
+#     return lines_list
+
+# if __name__ == "__main__":
+#     if not is_python3():
+#         print("only support python3")
+#         sys.exit(0)
+
+#     # 读取示例文本
+#     lines = read_tts_text()
+
+#     #### 示例一：单线程串行调用 ####
+#     for idx, line in enumerate(lines):
+#         result = process_tts_stream(idx, line)
+#         print(f"\nTask {result} completed\n")
+    
+#     #### 示例二：多线程调用 ####
+#     # thread_concurrency_num = 3 # 最大线程数
+#     # with ThreadPoolExecutor(max_workers=thread_concurrency_num) as executor:
+#     #     futures = [executor.submit(process, idx, line) for idx, line in enumerate(lines)]
+#     #     for future in as_completed(futures):
+#     #         result = future.result()
+#     #         print(f"\nTask {result} completed\n")
+
+#     #### 示例三：多进程调用（适用于高并发场景） ####
+#     # process_concurrency_num = 3 # 最大进程数
+#     # with ProcessPoolExecutor(max_workers=process_concurrency_num) as executor:
+#     #     futures = [executor.submit(process, idx, line) for idx, line in enumerate(lines)]
+#     #     for future in as_completed(futures):
+#     #         result = future.result()
+#     #         print(f"\nTask {result} completed\n")
+
+import asyncio
+import websockets
+import base64
+import logging
+
+from utils.comm_utils import enqueue_audio
+
+MAIN_LOOP = asyncio.get_event_loop()
+
+import asyncio
+import websockets
+import base64
+import re
+import logging
+
+from utils.comm_utils import enqueue_audio
+
+MAIN_LOOP = asyncio.get_event_loop()
+
+async def send_safe(fe_ws, b64_audio: str):
+    """Send audio safely to FE without blocking."""
     try:
         if not fe_ws.client_state.closed:
             await enqueue_audio(fe_ws, b64_audio)
     except Exception as e:
-        logger.warning(f"Skipping send, WS closed or error: {e}")
-
-class MySpeechSynthesisListener(SpeechSynthesisListener):
-    
-    def __init__(self, id, codec, sample_rate, fe_websocket):
-        super().__init__()
-        self.id = id
-        self.codec = codec
-        self.sample_rate = sample_rate
-        self.fe_websocket = fe_websocket
-        self.audio_data = b''
-        self.audio_file = ""
-
-    def set_audio_file(self, filename):
-        self.audio_file = filename
-
-    def on_synthesis_start(self, session_id):
-        print(f"[DEBUG] TTS ws session id: {session_id}")
-        super().on_synthesis_start(session_id)
-        if not self.audio_file:
-            self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
-        self.audio_data = b''
-
-    def on_audio_result(self, audio_bytes):
-        super().on_audio_result(audio_bytes)
-        self.audio_data += audio_bytes  # accumulate
-
-    def on_synthesis_end(self):
-        super().on_synthesis_end()
-        b64_audio = base64.b64encode(self.audio_data).decode()
-        # enqueue audio safely in main event loop
-        asyncio.run_coroutine_threadsafe(send_safe(self.fe_websocket, b64_audio), MAIN_LOOP)
-        logger.info(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
-
-    def on_synthesis_fail(self, response):
-        super().on_synthesis_fail(response)
-        err_code = response.get("code", "N/A")
-        err_msg = response.get("message", "")
-        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
-
-async def process_sentence(text, sentence_id, fe_websocket):
-    print(f"[DEBUG] process text thru stream: {text}")
-    logger.info("process start: idx={} text={}".format(sentence_id, text))
-    listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
-    credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
-    synthesizer = SpeechSynthesizer(
-        TENCENT_APP_ID, credential_var, listener)
-    synthesizer.set_text(text)
-    synthesizer.set_voice_type(VOICETYPE)
-    synthesizer.set_codec(CODEC)
-    synthesizer.set_sample_rate(SAMPLE_RATE)
-    synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
-    synthesizer.set_fast_voice_type(FASTVOICETYPE)
-    
-    synthesizer.start()
-    # wait for processing complete
-    synthesizer.wait()
-
-    logger.info("process done: idx={} text={}".format(sentence_id, text))
-
+        logging.warning(f"Skipping send, WS closed or error: {e}")
 
 def split_sentences(text: str):
     """
-    Split Chinese / English text into sentences based on common punctuation.
+    Split Chinese / English text into sentences based on punctuation.
     """
-    # Define Chinese and English sentence enders
     pattern = r'[。！？.!?\n]+'
-    # Split & clean
     sentences = re.split(pattern, text)
     return [s.strip() for s in sentences if s.strip()]
 
+def parse_tts_message(message: str) -> str:
+    """
+    Parse Tencent TTS websocket message to raw audio bytes.
+    Implement based on Tencent TTS WebSocket message structure.
+    """
+    import json
+    msg = json.loads(message)
+    audio_b64 = msg.get("audio", "")
+    return audio_b64
 
-async def process_tts_stream(full_text, fe_websocket):
+async def process_sentence(fe_ws, tencent_ws_url: str, sentence: str):
+    """Send a single sentence to Tencent TTS and stream audio chunks."""
+    try:
+        async with websockets.connect(tencent_ws_url) as tts_ws:
+            await tts_ws.send(sentence)
+
+            async for message in tts_ws:
+                b64_audio = parse_tts_message(message)
+                if b64_audio:
+                    await send_safe(fe_ws, b64_audio)
+
+    except asyncio.CancelledError:
+        logging.info("TTS sentence task cancelled")
+    except websockets.exceptions.ConnectionClosedOK:
+        logging.info("Tencent TTS websocket closed normally")
+    except Exception as e:
+        logging.error(f"TTS sentence streaming failed: {e}")
+
+async def process_tts_stream(fe_ws, tencent_ws_url: str, full_text: str):
+    """
+    Split full text into sentences and process each in parallel.
+    """
     sentences = split_sentences(full_text)
-    for idx, sentence in enumerate(sentences):
-        await process_sentence(sentence, idx, fe_websocket)
+    tasks = [
+        asyncio.create_task(process_sentence(fe_ws, tencent_ws_url, s))
+        for s in sentences
+    ]
+    # Wait for all sentences to finish
+    await asyncio.gather(*tasks, return_exceptions=True)
 
-def read_tts_text():
-    lines_list = []
-    with open('tts_text.txt', 'r', encoding='utf-8') as file:
-        for line in file:
-            lines_list.append(line.strip())
-    # print("total read {} lines".format(len(lines_list)))
-    return lines_list
+# Example message handler
+async def handle_message(fe_ws, message, tencent_ws_url):
+    text = message.get("text", "")
+    tts_task = asyncio.create_task(process_tts_stream(fe_ws, tencent_ws_url, text))
 
-if __name__ == "__main__":
-    if not is_python3():
-        print("only support python3")
-        sys.exit(0)
-
-    # 读取示例文本
-    lines = read_tts_text()
-
-    #### 示例一：单线程串行调用 ####
-    for idx, line in enumerate(lines):
-        result = process_tts_stream(idx, line)
-        print(f"\nTask {result} completed\n")
-    
-    #### 示例二：多线程调用 ####
-    # thread_concurrency_num = 3 # 最大线程数
-    # with ThreadPoolExecutor(max_workers=thread_concurrency_num) as executor:
-    #     futures = [executor.submit(process, idx, line) for idx, line in enumerate(lines)]
-    #     for future in as_completed(futures):
-    #         result = future.result()
-    #         print(f"\nTask {result} completed\n")
-
-    #### 示例三：多进程调用（适用于高并发场景） ####
-    # process_concurrency_num = 3 # 最大进程数
-    # with ProcessPoolExecutor(max_workers=process_concurrency_num) as executor:
-    #     futures = [executor.submit(process, idx, line) for idx, line in enumerate(lines)]
-    #     for future in as_completed(futures):
-    #         result = future.result()
-    #         print(f"\nTask {result} completed\n")
+    try:
+        await tts_task
+    except Exception as e:
+        tts_task.cancel()
+        logging.error(f"Error during TTS handling: {e}")
