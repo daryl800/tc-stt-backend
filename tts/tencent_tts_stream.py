@@ -55,37 +55,18 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
-
-        # TODO 合成结束，添加业务逻辑
-        logger.info("write audio file, path={}, size={}".format(
-            self.audio_file, len(self.audio_data)
-        ))
-        if self.codec == "pcm":
-            wav_fp = wave.open(self.audio_file + ".wav", "wb")
-            wav_fp.setnchannels(1)
-            wav_fp.setsampwidth(2)
-            wav_fp.setframerate(self.sample_rate)
-            wav_fp.writeframes(self.audio_data)
-            wav_fp.close()
-        elif self.codec == "mp3":
-            fp = open(self.audio_file, "wb")
-            fp.write(self.audio_data)
-            fp.close()
-        else:
-            logger.info("codec {}: sdk NOT implemented, please save the file yourself".format(
-                self.codec
-            ))
-
-        print(f"[DEBUG] 合成结束。")
-           
+        # Convert to base64
+        b64_audio = base64.b64encode(self.audio_data).decode()
+        # Send to FE safely using asyncio thread-safe call
+        asyncio.run_coroutine_threadsafe(
+            enqueue_audio(self.fe_websocket, b64_audio), MAIN_LOOP
+        )
+        # Optionally log
+        print(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
 
     def on_audio_result(self, audio_bytes):
-        b64_chunk = base64.b64encode(audio_bytes).decode()
-        print(f"[DEBUG] Sending audio chunk of size {len(audio_bytes)} to FE")
-        # use your enqueue_audio here
-        asyncio.run_coroutine_threadsafe(enqueue_audio(self.fe_websocket, b64_chunk), MAIN_LOOP)
-
-        self.audio_data += audio_bytes
+        super().on_audio_result(audio_bytes)
+        self.audio_data += audio_bytes  # accumulate
 
     def on_synthesis_complete(self, session_id):
         print(f"[INFO] Synthesis complete: {session_id}")
@@ -139,10 +120,10 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         print(f"[ERROR] err_msg: {err_msg}, err_code: {err_code}")
         
 
-def process_tts_stream(text, fe_websocket, id=1):
+def process_sentence(text, sentence_id, fe_websocket):
     print(f"[DEBUG] process text thru stream: {text}")
-    logger.info("process start: idx={} text={}".format(id, text))
-    listener = MySpeechSynthesisListener(id, CODEC, SAMPLE_RATE, fe_websocket)
+    logger.info("process start: idx={} text={}".format(sentence_id, text))
+    listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
     synthesizer = SpeechSynthesizer(
         TENCENT_APP_ID, credential_var, listener)
@@ -157,8 +138,18 @@ def process_tts_stream(text, fe_websocket, id=1):
     # wait for processing complete
     synthesizer.wait()
 
-    logger.info("process done: idx={} text={}".format(id, text))
-    return id
+    logger.info("process done: idx={} text={}".format(sentence_id, text))
+
+
+def split_sentences(text):
+    # naive example; can use NLP sentence splitter
+    return [s.strip() for s in text.replace("\n", " ").split("。") if s.strip()]
+
+
+async def process_tts_stream(full_text, fe_websocket):
+    sentences = split_sentences(full_text)
+    for idx, sentence in enumerate(sentences):
+        await process_sentence(sentence, idx, fe_websocket)
 
 def read_tts_text():
     lines_list = []
