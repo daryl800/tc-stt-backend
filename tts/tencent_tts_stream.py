@@ -35,88 +35,36 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         self.fe_websocket = fe_websocket
         self.audio_data = b''
         self.audio_file = ""
-    
+
     def set_audio_file(self, filename):
         self.audio_file = filename
 
     def on_synthesis_start(self, session_id):
-        '''
-        session_id: 请求session id，类型字符串
-        '''
         print(f"[DEBUG] TTS ws session id: {session_id}")
         super().on_synthesis_start(session_id)
-        
-        # TODO 合成开始，添加业务逻辑
         if not self.audio_file:
-            self.audio_file = "speech_synthesis_output_" + str(self.id) + "." + self.codec
-        self.audio_data = bytes()
-
-    def on_synthesis_end(self):
-        super().on_synthesis_end()
-        # Convert to base64
-        b64_audio = base64.b64encode(self.audio_data).decode()
-        # Send to FE safely using asyncio thread-safe call
-        asyncio.run_coroutine_threadsafe(
-            enqueue_audio(self.fe_websocket, b64_audio), MAIN_LOOP
-        )
-        # Optionally log
-        print(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
+            self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
+        self.audio_data = b''
 
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes  # accumulate
 
-    def on_synthesis_complete(self, session_id):
-        print(f"[INFO] Synthesis complete: {session_id}")
-
-    def on_text_result(self, response):
-        '''
-        response: 文本结果，类型 dict，如下
-        字段名       类型         说明
-        code        int         错误码（无需处理，SpeechSynthesizer中已解析，错误消息路由至 on_synthesis_fail）
-        message     string      错误信息
-        session_id  string      回显客户端传入的 session id
-        request_id  string      请求 id，区分不同合成请求，一次 websocket 通信中，该字段相同
-        message_id  string      消息 id，区分不同 websocket 消息
-        final       bool        合成是否完成（无需处理，SpeechSynthesizer中已解析）
-        result      Result      文本结果结构体
-
-        Result 结构体
-        字段名       类型                说明
-        subtitles   array of Subtitle  时间戳数组
-        
-        Subtitle 结构体
-        字段名       类型     说明
-        Text        string  合成文本
-        BeginTime   int     开始时间戳
-        EndTime     int     结束时间戳
-        BeginIndex  int     开始索引
-        EndIndex    int     结束索引
-        Phoneme     string  音素
-        '''
-        super().on_text_result(response)
-
-        # TODO 接收到文本数据，添加业务逻辑
-        result = response["result"]
-        subtitles = []
-        if "subtitles" in result and len(result["subtitles"]) > 0:
-            subtitles = result["subtitles"]
+    def on_synthesis_end(self):
+        super().on_synthesis_end()
+        # Convert accumulated audio to base64
+        b64_audio = base64.b64encode(self.audio_data).decode()
+        # Send to frontend safely
+        asyncio.run_coroutine_threadsafe(
+            enqueue_audio(self.fe_websocket, b64_audio), MAIN_LOOP
+        )
+        print(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
 
     def on_synthesis_fail(self, response):
-        '''
-        response: 文本结果，类型 dict，如下
-        字段名 类型
-        code        int         错误码
-        message     string      错误信息
-        '''
         super().on_synthesis_fail(response)
-
-        # TODO 合成失败，添加错误处理逻辑
-        err_code = response["code"]
-        err_msg = response["message"]
-
-        print(f"[ERROR] err_msg: {err_msg}, err_code: {err_code}")
-        
+        err_code = response.get("code", "N/A")
+        err_msg = response.get("message", "")
+        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
 
 async def process_sentence(text, sentence_id, fe_websocket):
     print(f"[DEBUG] process text thru stream: {text}")
