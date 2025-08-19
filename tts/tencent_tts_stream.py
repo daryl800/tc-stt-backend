@@ -120,7 +120,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         print(f"[ERROR] err_msg: {err_msg}, err_code: {err_code}")
         
 
-def process_sentence(text, sentence_id, fe_websocket):
+async def process_sentence(text, sentence_id, fe_websocket):
     print(f"[DEBUG] process text thru stream: {text}")
     logger.info("process start: idx={} text={}".format(sentence_id, text))
     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
