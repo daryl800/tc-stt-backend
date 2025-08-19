@@ -104,6 +104,7 @@ def split_sentences(text: str):
 
 
 async def process_tts_stream(full_text, fe_websocket):
+    logger.info("process_tts_stream {}:".format(full_text))
     sentences = split_sentences(full_text)
     for idx, sentence in enumerate(sentences):
         # await process_sentence(sentence, idx, fe_websocket)
