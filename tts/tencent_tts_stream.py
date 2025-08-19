@@ -3,13 +3,13 @@
 
 # import asyncio
 # import sys
-# import re
+import re
 # import base64
 # from concurrent.futures import as_completed
 # from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
-# from utils.log import logger
+from utils.log import logger
 # from utils.chk_version import is_python3
-# from utils.comm_utils import enqueue_audio
+from utils.comm_utils import enqueue_audio
 # from utils.credential import Credential
 
 # Add parent directory of utils
@@ -93,6 +93,7 @@ ENABLE_SUBTITLE = True
 
 
 def split_sentences(text: str):
+    
     """
     Split Chinese / English text into sentences based on common punctuation.
     """
@@ -100,6 +101,7 @@ def split_sentences(text: str):
     pattern = r'[。！？.!?\n]+'
     # Split & clean
     sentences = re.split(pattern, text)
+    logger.info("splitted sentence {}".format(sentences))
     return [s.strip() for s in sentences if s.strip()]
 
 
@@ -187,13 +189,16 @@ class AsyncTTSHandler:
         )
         
         # Send audio via WebSocket in main event loop
+        logger.info("penqueue_audio ...")
         # await self._send_audio(fe_websocket, b64_audio)
+        await enqueue_audio(fe_websocket, b64_audio)
 
     async def _send_audio(self, websocket, audio_data):
         if not websocket.closed:
             await websocket.send_text(audio_data)
 
 async def process_tts_stream(full_text, fe_websocket):
+    logger.info("process_tts_stream {}".format(full_text))
     handler = AsyncTTSHandler(TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
     sentences = split_sentences(full_text)
     
