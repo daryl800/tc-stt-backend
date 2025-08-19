@@ -80,8 +80,9 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
            
 
     def on_audio_result(self, audio_bytes):
-        # use your enqueue_audio here
         b64_chunk = base64.b64encode(audio_bytes).decode()
+        print(f"[DEBUG] Sending audio chunk of size {len(audio_bytes)} to FE")
+        # use your enqueue_audio here
         asyncio.run_coroutine_threadsafe(enqueue_audio(self.fe_websocket, b64_chunk), MAIN_LOOP)
 
         self.audio_data += audio_bytes
