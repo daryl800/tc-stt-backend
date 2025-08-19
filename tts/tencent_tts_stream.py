@@ -25,6 +25,14 @@ ENABLE_SUBTITLE = True
 # Capture main asyncio loop once at backend startup
 MAIN_LOOP = asyncio.get_event_loop()
 
+async def send_safe(fe_ws, b64_audio):
+    """Safely enqueue audio to FE websocket in async loop."""
+    try:
+        if not fe_ws.client_state.closed:
+            await enqueue_audio(fe_ws, b64_audio)
+    except Exception as e:
+        logger.warning(f"Skipping send, WS closed or error: {e}")
+
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     
     def __init__(self, id, codec, sample_rate, fe_websocket):
@@ -52,13 +60,10 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
-        # Convert accumulated audio to base64
         b64_audio = base64.b64encode(self.audio_data).decode()
-        # Send to frontend safely
-        asyncio.run_coroutine_threadsafe(
-            enqueue_audio(self.fe_websocket, b64_audio), MAIN_LOOP
-        )
-        print(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
+        # enqueue audio safely in main event loop
+        asyncio.run_coroutine_threadsafe(send_safe(self.fe_websocket, b64_audio), MAIN_LOOP)
+        logger.info(f"[DEBUG] Sent sentence audio of size {len(self.audio_data)} to FE")
 
     def on_synthesis_fail(self, response):
         super().on_synthesis_fail(response)
