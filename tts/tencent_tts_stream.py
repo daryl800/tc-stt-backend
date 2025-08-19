@@ -141,9 +141,15 @@ async def process_sentence(text, sentence_id, fe_websocket):
     logger.info("process done: idx={} text={}".format(sentence_id, text))
 
 
-def split_sentences(text):
-    # naive example; can use NLP sentence splitter
-    return [s.strip() for s in text.replace("\n", " ").split("。") if s.strip()]
+def split_sentences(text: str):
+    """
+    Split Chinese / English text into sentences based on common punctuation.
+    """
+    # Define Chinese and English sentence enders
+    pattern = r'[。！？.!?\n]+'
+    # Split & clean
+    sentences = re.split(pattern, text)
+    return [s.strip() for s in sentences if s.strip()]
 
 
 async def process_tts_stream(full_text, fe_websocket):
