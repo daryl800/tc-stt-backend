@@ -106,7 +106,11 @@ def split_sentences(text: str):
 async def process_tts_stream(full_text, fe_websocket):
     sentences = split_sentences(full_text)
     for idx, sentence in enumerate(sentences):
-        await process_sentence(sentence, idx, fe_websocket)
+        # await process_sentence(sentence, idx, fe_websocket)
+        asyncio.create_task(asyncio.to_thread(
+    process_sentence, sentence, idx, fe_websocket
+))
+
 
 def read_tts_text():
     lines_list = []
