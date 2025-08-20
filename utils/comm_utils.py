@@ -17,6 +17,7 @@ async def enqueue_audio(websocket: WebSocket, base64_audio: str):
     global sending_task
     await audio_queue.put((websocket, base64_audio))
 
+    print(f"[INFO] enqueue_audio 。。。")
     if sending_task is None or sending_task.done():
         sending_task = asyncio.create_task(audio_sending_loop())
 
