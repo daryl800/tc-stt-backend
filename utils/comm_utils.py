@@ -1,4 +1,3 @@
-
 import asyncio
 from fastapi import WebSocket
 from typing import Union
@@ -26,6 +25,7 @@ async def audio_sending_loop():
     while not audio_queue.empty():
         websocket, base64_audio = await audio_queue.get()
         try:
+            print(f"[INFO] Sending audio out from msg queue, data size is : {len(base64_audio)}")
             await reply_to_FE(websocket, 'audio', base64_audio)
             await asyncio.sleep(0.3)  # To avoid overlap
         except Exception as e:
