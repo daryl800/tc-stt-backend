@@ -239,14 +239,16 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             b64_audio = base64.b64encode(wav_data).decode()
             
             # Send to frontend
-            await self.fe_websocket.send_text(json.dumps({
-                "type": "audio",
-                "sentence_id": self.sentence_id,
-                "payload": b64_audio,
-                "format": "wav",
-                "sample_rate": self.sample_rate,
-                "size": len(wav_data)
-            }))
+            # await self.fe_websocket.send_text(json.dumps({
+            #     "type": "audio",
+            #     "sentence_id": self.sentence_id,
+            #     "payload": b64_audio,
+            #     "format": "wav",
+            #     "sample_rate": self.sample_rate,
+            #     "size": len(wav_data)
+            # }))
+
+            await enqueue_audio(self.fe_websocket, b64_audio)
             
             logger.info(f"Sent complete WAV audio for sentence {self.sentence_id}: {len(wav_data)} bytes")
             
