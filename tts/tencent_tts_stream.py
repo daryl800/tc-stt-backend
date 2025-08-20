@@ -161,13 +161,15 @@ import re
 import base64
 import json
 import time
+import io
+import wave
 from concurrent.futures import ThreadPoolExecutor
 from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
 from utils.credential import Credential
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
-VOICETYPE = 101019  # 音色类型
+VOICETYPE = 101001  # 音色类型
 FASTVOICETYPE = ""
 CODEC = "pcm"  # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000  # 音频采样率：8000/16000
@@ -175,6 +177,16 @@ ENABLE_SUBTITLE = True
 
 # Thread pool for handling TTS requests - increased workers
 executor = ThreadPoolExecutor(max_workers=10)
+
+def pcm_to_wav(pcm_data, sample_rate=16000, sample_width=2, channels=1):
+    """Convert PCM data to WAV format with proper headers"""
+    with io.BytesIO() as wav_buffer:
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(sample_width)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(pcm_data)
+        return wav_buffer.getvalue()
 
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, sentence_id, codec, sample_rate, fe_websocket):
@@ -196,19 +208,23 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes
         self.chunk_count += 1
-        
-        # Send audio chunk immediately without waiting for full synthesis
-        asyncio.run_coroutine_threadsafe(
-            self.send_audio_chunk(audio_bytes), 
-            self.loop
-        )
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
         processing_time = time.time() - self.start_time
+        
+        # Convert PCM to WAV format
+        wav_data = pcm_to_wav(self.audio_data, self.sample_rate)
+        
+        # Send complete WAV audio to frontend
+        asyncio.run_coroutine_threadsafe(
+            self.send_complete_audio(wav_data), 
+            self.loop
+        )
+        
         logger.info(f"Synthesis completed for sentence {self.sentence_id}: "
-                   f"{len(self.audio_data)} bytes, {self.chunk_count} chunks, "
-                   f"time: {processing_time:.2f}s")
+                   f"{len(self.audio_data)} bytes PCM -> {len(wav_data)} bytes WAV, "
+                   f"{self.chunk_count} chunks, time: {processing_time:.2f}s")
 
     def on_synthesis_fail(self, response):
         super().on_synthesis_fail(response)
@@ -216,30 +232,26 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         err_msg = response.get("message", "")
         logger.error(f"TTS synthesis failed for sentence {self.sentence_id}: {err_code}, {err_msg}")
 
-    async def send_audio_chunk(self, audio_bytes):
-        """Send individual audio chunks as they become available"""
+    async def send_complete_audio(self, wav_data):
+        """Send complete WAV audio to frontend"""
         try:
-            # Skip empty or very small audio chunks
-            if len(audio_bytes) < 100:
-                return
-                
             # Convert to base64
-            b64_audio = base64.b64encode(audio_bytes).decode()
+            b64_audio = base64.b64encode(wav_data).decode()
             
-            # Send to frontend immediately
+            # Send to frontend
             await self.fe_websocket.send_text(json.dumps({
                 "type": "audio",
                 "sentence_id": self.sentence_id,
-                "payload": b64_audio,
-                "format": CODEC,
-                "sample_rate": SAMPLE_RATE,
-                "chunk_size": len(audio_bytes)
+                "data": b64_audio,
+                "format": "wav",
+                "sample_rate": self.sample_rate,
+                "size": len(wav_data)
             }))
             
-            logger.debug(f"Sent audio chunk for sentence {self.sentence_id}: {len(audio_bytes)} bytes")
+            logger.info(f"Sent complete WAV audio for sentence {self.sentence_id}: {len(wav_data)} bytes")
             
         except Exception as e:
-            logger.warning(f"Failed to send audio chunk for sentence {self.sentence_id}: {e}")
+            logger.error(f"Failed to send audio for sentence {self.sentence_id}: {e}")
 
 def run_synthesizer(synthesizer):
     """Run the synthesizer in a thread"""
@@ -314,3 +326,7 @@ async def process_tts_stream(full_text, fe_websocket):
         }))
     except Exception as e:
         logger.warning(f"Failed to send completion message: {e}")
+
+
+  
+        
