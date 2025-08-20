@@ -242,7 +242,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             await self.fe_websocket.send_text(json.dumps({
                 "type": "audio",
                 "sentence_id": self.sentence_id,
-                "data": b64_audio,
+                "payload": b64_audio,
                 "format": "wav",
                 "sample_rate": self.sample_rate,
                 "size": len(wav_data)
