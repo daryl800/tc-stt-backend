@@ -201,17 +201,18 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         if not self.audio_file:
             self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
         self.audio_data = b''
+        logger.info(f"[DEBUG] - on_audio_result")
 
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes
         
         # Send audio chunk to frontend immediately
-        # asyncio.run_coroutine_threadsafe(
-        #     self.send_audio_chunk(audio_bytes), 
-        #     self.loop
-        # )
-        logger.info(f"[DEBUG on_synthesis_end:] Sending audio chunk of size {len(audio_bytes)} to FE")
+        asyncio.run_coroutine_threadsafe(
+            self.send_audio_chunk(audio_bytes), 
+            self.loop
+        )
+        logger.info(f"[DEBUG] - on_audio_result")
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
@@ -220,7 +221,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             self.send_final_audio(), 
             self.loop
         )
-        logger.info(f"[DEBUG on_synthesis_end:] Sent sentence audio of size {len(self.audio_data)} to FE")
+        logger.info(f"[DEBUG] - on_synthesis_end: Sent sentence audio of size {len(self.audio_data)} to FE")
 
 
     # Then use it in your send methods:
@@ -272,7 +273,7 @@ def run_synthesizer(synthesizer):
         synthesizer.wait()
 
 async def process_sentence(text, sentence_id, fe_websocket):
-    print(f"[DEBUG] process text thru stream: {text}")
+    print(f"[DEBUG] - process_sentence: process text thru stream: {text}")
     logger.info("process start: idx={} text={}".format(sentence_id, text))
     
     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
