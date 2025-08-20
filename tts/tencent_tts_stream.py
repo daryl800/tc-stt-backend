@@ -157,19 +157,16 @@ def split_sentences(text: str):
 #######################################
 # -*- coding: utf-8 -*-
 
+# -*- coding: utf-8 -*-
 import asyncio
-import sys
 import re
 import base64
 import json
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
-from utils.chk_version import is_python3
 from utils.comm_utils import enqueue_audio
 from utils.credential import Credential
-
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 VOICETYPE = 101001  # 音色类型
@@ -180,6 +177,28 @@ ENABLE_SUBTITLE = True
 
 # Thread pool for handling TTS requests
 executor = ThreadPoolExecutor(max_workers=5)
+
+def is_websocket_connected(websocket):
+    """Check if WebSocket connection is still open"""
+    try:
+        # For Starlette/FastAPI
+        if hasattr(websocket, 'client_state'):
+            from starlette.websockets import WebSocketState
+            return websocket.client_state != WebSocketState.DISCONNECTED
+        
+        # For other implementations with 'closed' attribute
+        if hasattr(websocket, 'closed'):
+            return not websocket.closed
+            
+        # For websockets library
+        if hasattr(websocket, 'open'):
+            return websocket.open
+            
+        # Default: assume connected if we can't determine
+        return True
+    except:
+        # If anything fails, assume disconnected
+        return False
 
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, id, codec, sample_rate, fe_websocket):
@@ -201,7 +220,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         if not self.audio_file:
             self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
         self.audio_data = b''
-        logger.info(f"[DEBUG] - on_audio_result")
+        logger.info(f"[DEBUG] - on_synthesis_start")
 
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
@@ -212,7 +231,6 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             self.send_audio_chunk(audio_bytes), 
             self.loop
         )
-        logger.info(f"[DEBUG] - on_audio_result")
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
@@ -223,54 +241,50 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         )
         logger.info(f"[DEBUG] - on_synthesis_end: Sent sentence audio of size {len(self.audio_data)} to FE")
 
+    def on_synthesis_fail(self, response):
+        super().on_synthesis_fail(response)
+        err_code = response.get("code", "N/A")
+        err_msg = response.get("message", "")
+        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
 
-    # Then use it in your send methods:
-async def send_audio_chunk(self, audio_bytes):
-    # Skip empty or very small audio chunks
-    if len(audio_bytes) < 100:  # Adjust this threshold as needed
-        logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
-        return
-        
-    try:
-        if is_websocket_connected(self.fe_websocket):
-            # b64_audio = base64.b64encode(audio_bytes).decode()
-            # await self.fe_websocket.send_text(json.dumps({
-            #     "type": "audio_chunk",
-            #     "data": b64_audio,
-            #     "size": len(audio_bytes)  # Optional: include size for debugging
-            # }))
-            await enqueue_audio(self.fe_websocket, audio_bytes)
-            logger.info(f"Now sending chunk of size {len(audio_bytes)} bytes to FE")
-    except Exception as e:
-        logger.warning(f"Failed to send audio chunk: {e}")
+    # These methods should be at the class level, not inside on_synthesis_end
+    async def send_audio_chunk(self, audio_bytes):
+        # Skip empty or very small audio chunks
+        if len(audio_bytes) < 100:
+            logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
+            return
+            
+        try:
+            if is_websocket_connected(self.fe_websocket):
+                # Convert to base64 before sending
+                b64_audio = base64.b64encode(audio_bytes).decode()
+                await self.fe_websocket.send_text(json.dumps({
+                    "type": "audio",
+                    "data": b64_audio,
+                    "size": len(audio_bytes)
+                }))
+                logger.info(f"Sent audio chunk of size {len(audio_bytes)} bytes to FE")
+        except Exception as e:
+            logger.warning(f"Failed to send audio chunk: {e}")
 
-async def send_final_audio(self):
-    try:
-        # b64_audio = base64.b64encode(self.audio_data).decode()
-        # Check connection state more reliably
-        if hasattr(self.fe_websocket, 'client_state'):
-            # For Starlette/FastAPI WebSockets
-            if self.fe_websocket.client_state.name != 'DISCONNECTED':
-                # await self.fe_websocket.send_text(json.dumps({
-                #     "type": "audio_final",
-                #     "data": b64_audio
-                # }))
-                await enqueue_audio(self.fe_websocket, self.audio_data)
-        else:
-            # Fallback for other WebSocket implementations
-            # await self.fe_websocket.send_text(json.dumps({
-            #     "type": "audio_final",
-            #     "data": b64_audio
-            # }))
-            await enqueue_audio(self.fe_websocket, self.audio_data)
-    except Exception as e:
-        logger.warning(f"Failed to send final audio: {e}")
-
+    async def send_final_audio(self):
+        try:
+            if is_websocket_connected(self.fe_websocket):
+                # Convert to base64 before sending
+                b64_audio = base64.b64encode(self.audio_data).decode()
+                await self.fe_websocket.send_text(json.dumps({
+                    "type": "audio",
+                    "data": b64_audio,
+                    "size": len(self.audio_data)
+                }))
+                logger.info(f"Sent final audio of size {len(self.audio_data)} bytes to FE")
+        except Exception as e:
+            logger.warning(f"Failed to send final audio: {e}")
 
 def run_synthesizer(synthesizer):
-        """Run the synthesizer in a thread"""
-        synthesizer.start()
-        synthesizer.wait()
+    """Run the synthesizer in a thread"""
+    synthesizer.start()
+    synthesizer.wait()
 
 async def process_sentence(text, sentence_id, fe_websocket):
     print(f"[DEBUG] - process_sentence: process text thru stream: {text}")
@@ -302,6 +316,7 @@ def split_sentences(text: str):
     pattern = r'[。！？.!?\n]+'
     # Split & clean
     sentences = re.split(pattern, text)
+    logger.info("splitted sentence {}".format(sentences))
     return [s.strip() for s in sentences if s.strip()]
 
 async def process_tts_stream(full_text, fe_websocket):
@@ -311,27 +326,3 @@ async def process_tts_stream(full_text, fe_websocket):
     # Process sentences sequentially
     for idx, sentence in enumerate(sentences):
         await process_sentence(sentence, idx, fe_websocket)
-# Rest of your code remains the same...
-
-def is_websocket_connected(websocket):
-    """Check if WebSocket connection is still open"""
-    try:
-        # For Starlette/FastAPI
-        if hasattr(websocket, 'client_state'):
-            from starlette.websockets import WebSocketState
-            return websocket.client_state != WebSocketState.DISCONNECTED
-        
-        # For other implementations with 'closed' attribute
-        if hasattr(websocket, 'closed'):
-            return not websocket.closed
-            
-        # For websockets library
-        if hasattr(websocket, 'open'):
-            return websocket.open
-            
-        # Default: assume connected if we can't determine
-        return True
-    except:
-        # If anything fails, assume disconnected
-        return False
-
