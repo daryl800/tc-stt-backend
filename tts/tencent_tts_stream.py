@@ -249,16 +249,18 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             if hasattr(self.fe_websocket, 'client_state'):
                 # For Starlette/FastAPI WebSockets
                 if self.fe_websocket.client_state.name != 'DISCONNECTED':
-                    await self.fe_websocket.send_text(json.dumps({
-                        "type": "audio_final",
-                        "data": b64_audio
-                    }))
+                    # await self.fe_websocket.send_text(json.dumps({
+                    #     "type": "audio_final",
+                    #     "data": b64_audio
+                    # }))
+                    await enqueue_audio(self.fe_websocket, b64_audio)
             else:
                 # Fallback for other WebSocket implementations
-                await self.fe_websocket.send_text(json.dumps({
-                    "type": "audio_final",
-                    "data": b64_audio
-                }))
+                # await self.fe_websocket.send_text(json.dumps({
+                #     "type": "audio_final",
+                #     "data": b64_audio
+                # }))
+                await enqueue_audio(self.fe_websocket, b64_audio)
         except Exception as e:
             logger.warning(f"Failed to send final audio: {e}")
 
