@@ -156,128 +156,90 @@ def split_sentences(text: str):
 
 #######################################
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 import asyncio
 import re
 import base64
 import json
-import io
-import wave
+import time
 from concurrent.futures import ThreadPoolExecutor
 from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
-from utils.comm_utils import enqueue_audio
 from utils.credential import Credential
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
-VOICETYPE = 101001  # 音色类型
+VOICETYPE = 101019  # 音色类型
 FASTVOICETYPE = ""
 CODEC = "pcm"  # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000  # 音频采样率：8000/16000
 ENABLE_SUBTITLE = True
 
-# Thread pool for handling TTS requests
-executor = ThreadPoolExecutor(max_workers=5)
-
-def is_websocket_connected(websocket):
-    """Check if WebSocket connection is still open"""
-    try:
-        # For Starlette/FastAPI
-        if hasattr(websocket, 'client_state'):
-            from starlette.websockets import WebSocketState
-            return websocket.client_state != WebSocketState.DISCONNECTED
-        
-        # For other implementations with 'closed' attribute
-        if hasattr(websocket, 'closed'):
-            return not websocket.closed
-            
-        # For websockets library
-        if hasattr(websocket, 'open'):
-            return websocket.open
-            
-        # Default: assume connected if we can't determine
-        return True
-    except:
-        # If anything fails, assume disconnected
-        return False
-
-def pcm_to_wav(pcm_data, sample_rate=16000, sample_width=2, channels=1):
-    """Convert PCM data to WAV format"""
-    with io.BytesIO() as wav_buffer:
-        with wave.open(wav_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(channels)
-            wav_file.setsampwidth(sample_width)
-            wav_file.setframerate(sample_rate)
-            wav_file.writeframes(pcm_data)
-        return wav_buffer.getvalue()
+# Thread pool for handling TTS requests - increased workers
+executor = ThreadPoolExecutor(max_workers=10)
 
 class MySpeechSynthesisListener(SpeechSynthesisListener):
-    def __init__(self, id, codec, sample_rate, fe_websocket):
+    def __init__(self, sentence_id, codec, sample_rate, fe_websocket):
         super().__init__()
-        self.id = id
+        self.sentence_id = sentence_id
         self.codec = codec
         self.sample_rate = sample_rate
         self.fe_websocket = fe_websocket
         self.audio_data = b''
-        self.audio_file = ""
+        self.start_time = time.time()
+        self.chunk_count = 0
         self.loop = asyncio.get_event_loop()
 
-    def set_audio_file(self, filename):
-        self.audio_file = filename
-
     def on_synthesis_start(self, session_id):
-        print(f"[DEBUG] TTS ws session id: {session_id}")
-        super().on_synthesis_start(session_id)
-        if not self.audio_file:
-            self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
+        logger.info(f"Synthesis started for sentence {self.sentence_id}, session: {session_id}")
         self.audio_data = b''
-        logger.info(f"[DEBUG] - on_synthesis_start")
 
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes
-        logger.info(f"Received audio chunk of size: {len(audio_bytes)} bytes")
+        self.chunk_count += 1
+        
+        # Send audio chunk immediately without waiting for full synthesis
+        asyncio.run_coroutine_threadsafe(
+            self.send_audio_chunk(audio_bytes), 
+            self.loop
+        )
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
-        # Convert accumulated PCM to WAV and send to frontend
-        asyncio.run_coroutine_threadsafe(
-            self.send_complete_audio(), 
-            self.loop
-        )
-        logger.info(f"Completed synthesis of {len(self.audio_data)} bytes")
-
-    async def send_complete_audio(self):
-        """Convert PCM to WAV and send as complete audio file"""
-        try:
-            if not is_websocket_connected(self.fe_websocket):
-                logger.warning("WebSocket not connected, cannot send audio")
-                return
-                
-            # Convert PCM to WAV format
-            wav_data = pcm_to_wav(self.audio_data, self.sample_rate)
-            
-            # Encode to base64
-            b64_audio = base64.b64encode(wav_data).decode()
-            
-            # Send to frontend
-            await self.fe_websocket.send_text(json.dumps({
-                "type": "audio",
-                "data": b64_audio,
-                "format": "wav",
-                "sample_rate": self.sample_rate
-            }))
-            
-            logger.info(f"Sent complete WAV audio of size {len(wav_data)} bytes to FE")
-            
-        except Exception as e:
-            logger.error(f"Failed to send complete audio: {e}")
+        processing_time = time.time() - self.start_time
+        logger.info(f"Synthesis completed for sentence {self.sentence_id}: "
+                   f"{len(self.audio_data)} bytes, {self.chunk_count} chunks, "
+                   f"time: {processing_time:.2f}s")
 
     def on_synthesis_fail(self, response):
         super().on_synthesis_fail(response)
         err_code = response.get("code", "N/A")
         err_msg = response.get("message", "")
-        logger.error(f"TTS synthesis failed: code={err_code}, msg={err_msg}")
+        logger.error(f"TTS synthesis failed for sentence {self.sentence_id}: {err_code}, {err_msg}")
+
+    async def send_audio_chunk(self, audio_bytes):
+        """Send individual audio chunks as they become available"""
+        try:
+            # Skip empty or very small audio chunks
+            if len(audio_bytes) < 100:
+                return
+                
+            # Convert to base64
+            b64_audio = base64.b64encode(audio_bytes).decode()
+            
+            # Send to frontend immediately
+            await self.fe_websocket.send_text(json.dumps({
+                "type": "audio",
+                "sentence_id": self.sentence_id,
+                "payload": b64_audio,
+                "format": CODEC,
+                "sample_rate": SAMPLE_RATE,
+                "chunk_size": len(audio_bytes)
+            }))
+            
+            logger.debug(f"Sent audio chunk for sentence {self.sentence_id}: {len(audio_bytes)} bytes")
+            
+        except Exception as e:
+            logger.warning(f"Failed to send audio chunk for sentence {self.sentence_id}: {e}")
 
 def run_synthesizer(synthesizer):
     """Run the synthesizer in a thread"""
@@ -285,12 +247,15 @@ def run_synthesizer(synthesizer):
     synthesizer.wait()
 
 async def process_sentence(text, sentence_id, fe_websocket):
-    logger.info(f"Processing sentence {sentence_id}: {text}")
+    """Process a single sentence asynchronously"""
+    logger.info(f"Starting TTS for sentence {sentence_id}: {text[:50]}...")
     
     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+    
     synthesizer = SpeechSynthesizer(
-        TENCENT_APP_ID, credential_var, listener)
+        TENCENT_APP_ID, credential_var, listener
+    )
     synthesizer.set_text(text)
     synthesizer.set_voice_type(VOICETYPE)
     synthesizer.set_codec(CODEC)
@@ -303,7 +268,7 @@ async def process_sentence(text, sentence_id, fe_websocket):
         executor, run_synthesizer, synthesizer
     )
     
-    logger.info(f"Completed processing sentence {sentence_id}")
+    logger.info(f"Completed TTS for sentence {sentence_id}")
 
 def split_sentences(text: str):
     """Split Chinese/English text into sentences"""
@@ -313,9 +278,39 @@ def split_sentences(text: str):
     return [s.strip() for s in sentences if s.strip()]
 
 async def process_tts_stream(full_text, fe_websocket):
-    logger.info(f"Processing TTS stream: {full_text}")
+    """Process full text through TTS with parallel execution"""
+    logger.info(f"Starting TTS stream processing: {full_text[:100]}...")
+    start_time = time.time()
+    
     sentences = split_sentences(full_text)
     
-    # Process sentences sequentially
+    # Create all TTS tasks to run in parallel
+    tasks = []
     for idx, sentence in enumerate(sentences):
-        await process_sentence(sentence, idx, fe_websocket)
+        task = asyncio.create_task(
+            process_sentence(sentence, idx, fe_websocket)
+        )
+        tasks.append(task)
+    
+    # Wait for all tasks to complete with timeout
+    try:
+        await asyncio.wait_for(asyncio.gather(*tasks), timeout=300)  # 5-minute timeout
+    except asyncio.TimeoutError:
+        logger.error("TTS processing timed out after 5 minutes")
+        # Cancel all remaining tasks
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+    
+    processing_time = time.time() - start_time
+    logger.info(f"Completed TTS stream processing in {processing_time:.2f} seconds")
+    
+    # Send completion message
+    try:
+        await fe_websocket.send_text(json.dumps({
+            "type": "tts_complete",
+            "total_sentences": len(sentences),
+            "processing_time": processing_time
+        }))
+    except Exception as e:
+        logger.warning(f"Failed to send completion message: {e}")
