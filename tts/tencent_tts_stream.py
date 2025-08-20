@@ -223,7 +223,6 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         logger.info(f"[DEBUG on_synthesis_end:] Sent sentence audio of size {len(self.audio_data)} to FE")
 
 
-
     # Then use it in your send methods:
 async def send_audio_chunk(self, audio_bytes):
     # Skip empty or very small audio chunks
@@ -265,6 +264,7 @@ async def send_final_audio(self):
             await enqueue_audio(self.fe_websocket, self.audio_data)
     except Exception as e:
         logger.warning(f"Failed to send final audio: {e}")
+
 
 def run_synthesizer(synthesizer):
         """Run the synthesizer in a thread"""
