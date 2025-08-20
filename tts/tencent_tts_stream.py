@@ -341,13 +341,13 @@ async def send_audio_chunk(self, audio_bytes):
         
     try:
         if is_websocket_connected(self.fe_websocket):
-            b64_audio = base64.b64encode(audio_bytes).decode()
+            #b64_audio = base64.b64encode(audio_bytes).decode()
             # await self.fe_websocket.send_text(json.dumps({
             #     "type": "audio_chunk",
             #     "data": b64_audio,
             #     "size": len(audio_bytes)  # Optional: include size for debugging
             # }))
-            await enqueue_audio(self.fe_websocket, b64_audio)
+            await enqueue_audio(self.fe_websocket, audio_bytes)
             logger.info(f"Now sending chunk of size {len(audio_bytes)} bytes to FE")
     except Exception as e:
         logger.warning(f"Failed to send audio chunk: {e}")

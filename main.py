@@ -162,9 +162,9 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                         # await enqueue_audio(websocket, accumulated_tts_wav)
 
                         for chunk in tts_chunks:
-                            tts_audio_bytes = await asyncio.to_thread(tencent_tts, chunk)
-                            b64_audio = base64.b64encode(
-                                tts_audio_bytes).decode()
+                            b64_audio= await asyncio.to_thread(tencent_tts, chunk)
+                            # b64_audio = base64.b64encode(
+                            #     tts_audio_bytes).decode()
                             await enqueue_audio(websocket, b64_audio)
 
                 else:
