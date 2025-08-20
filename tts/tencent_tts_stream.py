@@ -213,27 +213,6 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         # )
         logger.info(f"[DEBUG on_synthesis_end:] Sending audio chunk of size {len(audio_bytes)} to FE")
 
-    # Then use it in your send methods:
-    async def send_audio_chunk(self, audio_bytes):
-        # Skip empty or very small audio chunks
-        if len(audio_bytes) < 100:  # Adjust this threshold as needed
-            logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
-            return
-            
-        try:
-            if is_websocket_connected(self.fe_websocket):
-                # b64_audio = base64.b64encode(audio_bytes).decode()
-                # await self.fe_websocket.send_text(json.dumps({
-                #     "type": "audio_chunk",
-                #     "data": b64_audio,
-                #     "size": len(audio_bytes)  # Optional: include size for debugging
-                # }))
-                await enqueue_audio(self.fe_websocket, audio_bytes)
-                logger.info(f"Now sending chunk of size {len(audio_bytes)} bytes to FE")
-        except Exception as e:
-            logger.warning(f"Failed to send audio chunk: {e}")
-            
-
     def on_synthesis_end(self):
         super().on_synthesis_end()
         # Send final complete audio
@@ -243,27 +222,48 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         )
         logger.info(f"[DEBUG on_synthesis_end:] Sent sentence audio of size {len(self.audio_data)} to FE")
 
-    async def send_final_audio(self):
-        try:
-            # b64_audio = base64.b64encode(self.audio_data).decode()
-            # Check connection state more reliably
-            if hasattr(self.fe_websocket, 'client_state'):
-                # For Starlette/FastAPI WebSockets
-                if self.fe_websocket.client_state.name != 'DISCONNECTED':
-                    # await self.fe_websocket.send_text(json.dumps({
-                    #     "type": "audio_final",
-                    #     "data": b64_audio
-                    # }))
-                    await enqueue_audio(self.fe_websocket, self.audio_data)
-            else:
-                # Fallback for other WebSocket implementations
+
+    # Then use it in your send methods:
+async def send_audio_chunk(self, audio_bytes):
+    # Skip empty or very small audio chunks
+    if len(audio_bytes) < 100:  # Adjust this threshold as needed
+        logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
+        return
+        
+    try:
+        if is_websocket_connected(self.fe_websocket):
+            # b64_audio = base64.b64encode(audio_bytes).decode()
+            # await self.fe_websocket.send_text(json.dumps({
+            #     "type": "audio_chunk",
+            #     "data": b64_audio,
+            #     "size": len(audio_bytes)  # Optional: include size for debugging
+            # }))
+            await enqueue_audio(self.fe_websocket, audio_bytes)
+            logger.info(f"Now sending chunk of size {len(audio_bytes)} bytes to FE")
+    except Exception as e:
+        logger.warning(f"Failed to send audio chunk: {e}")
+
+async def send_final_audio(self):
+    try:
+        # b64_audio = base64.b64encode(self.audio_data).decode()
+        # Check connection state more reliably
+        if hasattr(self.fe_websocket, 'client_state'):
+            # For Starlette/FastAPI WebSockets
+            if self.fe_websocket.client_state.name != 'DISCONNECTED':
                 # await self.fe_websocket.send_text(json.dumps({
                 #     "type": "audio_final",
                 #     "data": b64_audio
                 # }))
                 await enqueue_audio(self.fe_websocket, self.audio_data)
-        except Exception as e:
-            logger.warning(f"Failed to send final audio: {e}")
+        else:
+            # Fallback for other WebSocket implementations
+            # await self.fe_websocket.send_text(json.dumps({
+            #     "type": "audio_final",
+            #     "data": b64_audio
+            # }))
+            await enqueue_audio(self.fe_websocket, self.audio_data)
+    except Exception as e:
+        logger.warning(f"Failed to send final audio: {e}")
 
 def run_synthesizer(synthesizer):
     """Run the synthesizer in a thread"""
