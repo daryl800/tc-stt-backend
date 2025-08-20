@@ -156,12 +156,13 @@ def split_sentences(text: str):
 
 #######################################
 # -*- coding: utf-8 -*-
-
 # -*- coding: utf-8 -*-
 import asyncio
 import re
 import base64
 import json
+import io
+import wave
 from concurrent.futures import ThreadPoolExecutor
 from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
@@ -200,6 +201,16 @@ def is_websocket_connected(websocket):
         # If anything fails, assume disconnected
         return False
 
+def pcm_to_wav(pcm_data, sample_rate=16000, sample_width=2, channels=1):
+    """Convert PCM data to WAV format"""
+    with io.BytesIO() as wav_buffer:
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(sample_width)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(pcm_data)
+        return wav_buffer.getvalue()
+
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, id, codec, sample_rate, fe_websocket):
         super().__init__()
@@ -225,61 +236,48 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes
-        
-        # Send audio chunk to frontend immediately
-        asyncio.run_coroutine_threadsafe(
-            self.send_audio_chunk(audio_bytes), 
-            self.loop
-        )
+        logger.info(f"Received audio chunk of size: {len(audio_bytes)} bytes")
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
-        # Send final complete audio
+        # Convert accumulated PCM to WAV and send to frontend
         asyncio.run_coroutine_threadsafe(
-            self.send_final_audio(), 
+            self.send_complete_audio(), 
             self.loop
         )
-        logger.info(f"[DEBUG] - on_synthesis_end: Sent sentence audio of size {len(self.audio_data)} to FE")
+        logger.info(f"Completed synthesis of {len(self.audio_data)} bytes")
+
+    async def send_complete_audio(self):
+        """Convert PCM to WAV and send as complete audio file"""
+        try:
+            if not is_websocket_connected(self.fe_websocket):
+                logger.warning("WebSocket not connected, cannot send audio")
+                return
+                
+            # Convert PCM to WAV format
+            wav_data = pcm_to_wav(self.audio_data, self.sample_rate)
+            
+            # Encode to base64
+            b64_audio = base64.b64encode(wav_data).decode()
+            
+            # Send to frontend
+            await self.fe_websocket.send_text(json.dumps({
+                "type": "audio",
+                "data": b64_audio,
+                "format": "wav",
+                "sample_rate": self.sample_rate
+            }))
+            
+            logger.info(f"Sent complete WAV audio of size {len(wav_data)} bytes to FE")
+            
+        except Exception as e:
+            logger.error(f"Failed to send complete audio: {e}")
 
     def on_synthesis_fail(self, response):
         super().on_synthesis_fail(response)
         err_code = response.get("code", "N/A")
         err_msg = response.get("message", "")
-        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
-
-    # These methods should be at the class level, not inside on_synthesis_end
-    async def send_audio_chunk(self, audio_bytes):
-        # Skip empty or very small audio chunks
-        if len(audio_bytes) < 100:
-            logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
-            return
-            
-        try:
-            if is_websocket_connected(self.fe_websocket):
-                # Convert to base64 before sending
-                b64_audio = base64.b64encode(audio_bytes).decode()
-                await self.fe_websocket.send_text(json.dumps({
-                    "type": "audio",
-                    "data": b64_audio,
-                    "size": len(audio_bytes)
-                }))
-                logger.info(f"Sent audio chunk of size {len(audio_bytes)} bytes to FE")
-        except Exception as e:
-            logger.warning(f"Failed to send audio chunk: {e}")
-
-    async def send_final_audio(self):
-        try:
-            if is_websocket_connected(self.fe_websocket):
-                # Convert to base64 before sending
-                b64_audio = base64.b64encode(self.audio_data).decode()
-                await self.fe_websocket.send_text(json.dumps({
-                    "type": "audio",
-                    "data": b64_audio,
-                    "size": len(self.audio_data)
-                }))
-                logger.info(f"Sent final audio of size {len(self.audio_data)} bytes to FE")
-        except Exception as e:
-            logger.warning(f"Failed to send final audio: {e}")
+        logger.error(f"TTS synthesis failed: code={err_code}, msg={err_msg}")
 
 def run_synthesizer(synthesizer):
     """Run the synthesizer in a thread"""
@@ -287,8 +285,7 @@ def run_synthesizer(synthesizer):
     synthesizer.wait()
 
 async def process_sentence(text, sentence_id, fe_websocket):
-    print(f"[DEBUG] - process_sentence: process text thru stream: {text}")
-    logger.info("process start: idx={} text={}".format(sentence_id, text))
+    logger.info(f"Processing sentence {sentence_id}: {text}")
     
     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
@@ -306,21 +303,17 @@ async def process_sentence(text, sentence_id, fe_websocket):
         executor, run_synthesizer, synthesizer
     )
     
-    logger.info("process done: idx={} text={}".format(sentence_id, text))
+    logger.info(f"Completed processing sentence {sentence_id}")
 
 def split_sentences(text: str):
-    """
-    Split Chinese / English text into sentences based on common punctuation.
-    """
-    # Define Chinese and English sentence enders
+    """Split Chinese/English text into sentences"""
     pattern = r'[。！？.!?\n]+'
-    # Split & clean
     sentences = re.split(pattern, text)
-    logger.info("splitted sentence {}".format(sentences))
+    logger.info(f"Split text into {len(sentences)} sentences")
     return [s.strip() for s in sentences if s.strip()]
 
 async def process_tts_stream(full_text, fe_websocket):
-    logger.info("process_tts_stream {}:".format(full_text))
+    logger.info(f"Processing TTS stream: {full_text}")
     sentences = split_sentences(full_text)
     
     # Process sentences sequentially
