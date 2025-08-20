@@ -216,7 +216,16 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
     async def send_audio_chunk(self, audio_bytes):
         try:
             b64_audio = base64.b64encode(audio_bytes).decode()
-            if not self.fe_websocket.client_state.closed:
+            # Check connection state more reliably
+            if hasattr(self.fe_websocket, 'client_state'):
+                # For Starlette/FastAPI WebSockets
+                if self.fe_websocket.client_state.name != 'DISCONNECTED':
+                    await self.fe_websocket.send_text(json.dumps({
+                        "type": "audio_chunk",
+                        "data": b64_audio
+                    }))
+            else:
+                # Fallback for other WebSocket implementations
                 await self.fe_websocket.send_text(json.dumps({
                     "type": "audio_chunk",
                     "data": b64_audio
@@ -236,19 +245,22 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
     async def send_final_audio(self):
         try:
             b64_audio = base64.b64encode(self.audio_data).decode()
-            if not self.fe_websocket.client_state.closed:
+            # Check connection state more reliably
+            if hasattr(self.fe_websocket, 'client_state'):
+                # For Starlette/FastAPI WebSockets
+                if self.fe_websocket.client_state.name != 'DISCONNECTED':
+                    await self.fe_websocket.send_text(json.dumps({
+                        "type": "audio_final",
+                        "data": b64_audio
+                    }))
+            else:
+                # Fallback for other WebSocket implementations
                 await self.fe_websocket.send_text(json.dumps({
                     "type": "audio_final",
                     "data": b64_audio
                 }))
         except Exception as e:
             logger.warning(f"Failed to send final audio: {e}")
-
-    def on_synthesis_fail(self, response):
-        super().on_synthesis_fail(response)
-        err_code = response.get("code", "N/A")
-        err_msg = response.get("message", "")
-        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
 
 def run_synthesizer(synthesizer):
     """Run the synthesizer in a thread"""
@@ -295,3 +307,44 @@ async def process_tts_stream(full_text, fe_websocket):
     for idx, sentence in enumerate(sentences):
         await process_sentence(sentence, idx, fe_websocket)
 # Rest of your code remains the same...
+
+def is_websocket_connected(websocket):
+    """Check if WebSocket connection is still open"""
+    try:
+        # For Starlette/FastAPI
+        if hasattr(websocket, 'client_state'):
+            from starlette.websockets import WebSocketState
+            return websocket.client_state != WebSocketState.DISCONNECTED
+        
+        # For other implementations with 'closed' attribute
+        if hasattr(websocket, 'closed'):
+            return not websocket.closed
+            
+        # For websockets library
+        if hasattr(websocket, 'open'):
+            return websocket.open
+            
+        # Default: assume connected if we can't determine
+        return True
+    except:
+        # If anything fails, assume disconnected
+        return False
+
+# Then use it in your send methods:
+async def send_audio_chunk(self, audio_bytes):
+    # Skip empty or very small audio chunks
+    if len(audio_bytes) < 100:  # Adjust this threshold as needed
+        logger.debug(f"Skipping small audio chunk of size {len(audio_bytes)} bytes")
+        return
+        
+    try:
+        if is_websocket_connected(self.fe_websocket):
+            b64_audio = base64.b64encode(audio_bytes).decode()
+            # await self.fe_websocket.send_text(json.dumps({
+            #     "type": "audio_chunk",
+            #     "data": b64_audio,
+            #     "size": len(audio_bytes)  # Optional: include size for debugging
+            # }))
+            logger.info(f"Now sending chunk of size {len(audio_bytes)} bytes to FE")
+    except Exception as e:
+        logger.warning(f"Failed to send audio chunk: {e}")
