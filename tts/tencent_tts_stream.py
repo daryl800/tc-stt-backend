@@ -153,80 +153,129 @@ def split_sentences(text: str):
 #     #         print(f"\nTask {result} completed\n")
 
 
+
 #######################################
 # -*- coding: utf-8 -*-
+
 import asyncio
 import sys
 import re
 import base64
 import json
+import threading
 from concurrent.futures import ThreadPoolExecutor
-from tencentcloud.common import credential
-from tencentcloud.common.profile.client_profile import ClientProfile
-from tencentcloud.tts.v20190823 import tts_client, models
+from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
 from utils.chk_version import is_python3
 from utils.comm_utils import enqueue_audio
+from utils.credential import Credential
 
-# Add parent directory of utils
-# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 VOICETYPE = 101001  # 音色类型
+FASTVOICETYPE = ""
 CODEC = "pcm"  # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000  # 音频采样率：8000/16000
+ENABLE_SUBTITLE = True
 
 # Thread pool for handling TTS requests
 executor = ThreadPoolExecutor(max_workers=5)
 
-class AsyncTTSHandler:
-    def __init__(self, app_id, secret_id, secret_key):
-        # Initialize credentials
-        cred = credential.Credential(secret_id, secret_key)
-        # Initialize client profile
-        client_profile = ClientProfile()
-        client_profile.httpProfile.endpoint = "tts.tencentcloudapi.com"
+class MySpeechSynthesisListener(SpeechSynthesisListener):
+    def __init__(self, id, codec, sample_rate, fe_websocket):
+        super().__init__()
+        self.id = id
+        self.codec = codec
+        self.sample_rate = sample_rate
+        self.fe_websocket = fe_websocket
+        self.audio_data = b''
+        self.audio_file = ""
+        self.loop = asyncio.get_event_loop()
+
+    def set_audio_file(self, filename):
+        self.audio_file = filename
+
+    def on_synthesis_start(self, session_id):
+        print(f"[DEBUG] TTS ws session id: {session_id}")
+        super().on_synthesis_start(session_id)
+        if not self.audio_file:
+            self.audio_file = f"speech_synthesis_output_{self.id}.{self.codec}"
+        self.audio_data = b''
+
+    def on_audio_result(self, audio_bytes):
+        super().on_audio_result(audio_bytes)
+        self.audio_data += audio_bytes
         
-        # Initialize TTS client
-        self.client = tts_client.TtsClient(cred, "ap-guangzhou", client_profile)
-        self.app_id = app_id
+        # Send audio chunk to frontend immediately
+        # asyncio.run_coroutine_threadsafe(
+        #     self.send_audio_chunk(audio_bytes), 
+        #     self.loop
+        # )
+        logger.info(f"[DEBUG on_synthesis_end:] Sending audio chunk of size {len(audio_bytes)} to FE")
 
-    async def synthesize(self, text, fe_websocket):
-        def _run_tts():
-            try:
-                req = models.TextToVoiceRequest()
-                req.AppId = self.app_id
-                req.Text = text
-                req.VoiceType = VOICETYPE
-                req.Codec = CODEC
-                req.SampleRate = SAMPLE_RATE
-                
-                # Call the Tencent TTS API
-                response = self.client.TextToVoice(req)
-                return base64.b64encode(response.Audio).decode()
-            except Exception as e:
-                logger.error(f"TTS synthesis error: {e}")
-                return None
-
-        # Offload TTS to thread pool
-        b64_audio = await asyncio.get_event_loop().run_in_executor(
-            executor, _run_tts
-        )
-        
-        if b64_audio:
-            # Send audio via WebSocket
-            # await self._send_audio(fe_websocket, b64_audio)
-            await enqueue_audio(fe_websocket, b64_audio)
-
-    async def _send_audio(self, websocket, audio_data):
+    async def send_audio_chunk(self, audio_bytes):
         try:
-            if not websocket.closed:
-                await websocket.send_text(json.dumps({
-                    "type": "audio",
-                    "data": audio_data
+            b64_audio = base64.b64encode(audio_bytes).decode()
+            if not self.fe_websocket.client_state.closed:
+                await self.fe_websocket.send_text(json.dumps({
+                    "type": "audio_chunk",
+                    "data": b64_audio
                 }))
         except Exception as e:
-            logger.warning(f"Failed to send audio: {e}")
+            logger.warning(f"Failed to send audio chunk: {e}")
+
+    def on_synthesis_end(self):
+        super().on_synthesis_end()
+        # Send final complete audio
+        asyncio.run_coroutine_threadsafe(
+            self.send_final_audio(), 
+            self.loop
+        )
+        logger.info(f"[DEBUG on_synthesis_end:] Sent sentence audio of size {len(self.audio_data)} to FE")
+
+    async def send_final_audio(self):
+        try:
+            b64_audio = base64.b64encode(self.audio_data).decode()
+            if not self.fe_websocket.client_state.closed:
+                await self.fe_websocket.send_text(json.dumps({
+                    "type": "audio_final",
+                    "data": b64_audio
+                }))
+        except Exception as e:
+            logger.warning(f"Failed to send final audio: {e}")
+
+    def on_synthesis_fail(self, response):
+        super().on_synthesis_fail(response)
+        err_code = response.get("code", "N/A")
+        err_msg = response.get("message", "")
+        print(f"[ERROR] TTS synthesis failed: code={err_code}, msg={err_msg}")
+
+def run_synthesizer(synthesizer):
+    """Run the synthesizer in a thread"""
+    synthesizer.start()
+    synthesizer.wait()
+
+async def process_sentence(text, sentence_id, fe_websocket):
+    print(f"[DEBUG] process text thru stream: {text}")
+    logger.info("process start: idx={} text={}".format(sentence_id, text))
+    
+    listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
+    credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+    synthesizer = SpeechSynthesizer(
+        TENCENT_APP_ID, credential_var, listener)
+    synthesizer.set_text(text)
+    synthesizer.set_voice_type(VOICETYPE)
+    synthesizer.set_codec(CODEC)
+    synthesizer.set_sample_rate(SAMPLE_RATE)
+    synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
+    synthesizer.set_fast_voice_type(FASTVOICETYPE)
+    
+    # Run synthesizer in thread pool to avoid blocking
+    await asyncio.get_event_loop().run_in_executor(
+        executor, run_synthesizer, synthesizer
+    )
+    
+    logger.info("process done: idx={} text={}".format(sentence_id, text))
 
 def split_sentences(text: str):
     """
@@ -239,13 +288,10 @@ def split_sentences(text: str):
     return [s.strip() for s in sentences if s.strip()]
 
 async def process_tts_stream(full_text, fe_websocket):
-    logger.info(f"Processing TTS stream: {full_text}")
-    handler = AsyncTTSHandler(TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+    logger.info("process_tts_stream {}:".format(full_text))
     sentences = split_sentences(full_text)
     
     # Process sentences sequentially
     for idx, sentence in enumerate(sentences):
-        await handler.synthesize(sentence, fe_websocket)
-        logger.info(f"Processed sentence {idx}: {sentence}")
-
+        await process_sentence(sentence, idx, fe_websocket)
 # Rest of your code remains the same...
