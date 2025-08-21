@@ -82,7 +82,7 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
                 return
                 
             # Convert PCM to WAV format
-            wav_data = pcm_to_wav(self.audio_data, self.sample_rate)
+            wav_data = pcm_to_wav(audio_bytes, self.sample_rate)
             
             # Encode to base64
             b64_audio = base64.b64encode(wav_data).decode()
