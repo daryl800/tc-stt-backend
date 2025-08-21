@@ -16,7 +16,8 @@ from db.db_utils import save_to_leancloud_async
 from db.query_memory import search_past_events
 from tts.tencent_tts_stream import process_tts_stream
 from asr.transcription import webm_bytes_to_wav_path, transcribe_tencent
-from utils.comm_utils import reply_to_FE, enqueue_audio
+from utils.comm_utils import reply_to_FE
+from tts.tencent_tts_stream import enqueue_audio
 from utils.filler_utils import pick_random_filler
 
 def extract_info_with_timing(transcription):
@@ -165,21 +166,24 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
                             b64_audio= await asyncio.to_thread(tencent_tts, chunk)
                             # b64_audio = base64.b64encode(
                             #     tts_audio_bytes).decode()
-                            await enqueue_audio(websocket, b64_audio)
+                            # TODO:  enable the following after test
+                            # await enqueue_audio(websocket, b64_audio)
 
                 else:
                     no_match_tts = base64.b64encode(
                         tencent_tts("你之前好似冇提过关于" + ", ".join(extraction.tags) +
                                     "嘅嘢!。不过，我揾到以下嘅嘢，你可以参考下。" + reflection)
                     ).decode()
-                    await enqueue_audio(websocket, no_match_tts)
+                    # TODO:  enable the following after test
+                    # await enqueue_audio(websocket, no_match_tts)
 
             except Exception as e:
                 print("[ERROR] TTS for question failed:")
                 traceback.print_exc()
                 error_tts = base64.b64encode(
                     tencent_tts("出错喇，请稍后再试。")).decode()
-                await enqueue_audio(websocket, error_tts)
+                # TODO:  enable the following after test
+                # await enqueue_audio(websocket, error_tts)
         else:
             response_dict = jsonable_encoder(extraction)
             response_dict["reflection"] = reflection
