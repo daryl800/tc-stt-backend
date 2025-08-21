@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import io
 import re
 import base64
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
+import wave
 from tts.speech_synthesizer_ws import SpeechSynthesizer, SpeechSynthesisListener
 from utils.log import logger
 from utils.credential import Credential
@@ -19,6 +21,16 @@ ENABLE_SUBTITLE = True
 # Thread pool for handling TTS requests - increased workers
 executor = ThreadPoolExecutor(max_workers=10)
 
+def pcm_to_wav(pcm_data, sample_rate=16000, sample_width=2, channels=1):
+    """Convert PCM data to WAV format"""
+    with io.BytesIO() as wav_buffer:
+        with wave.open(wav_buffer, 'wb') as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(sample_width)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(pcm_data)
+        return wav_buffer.getvalue()
+        
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, sentence_id, codec, sample_rate, fe_websocket):
         super().__init__()
@@ -59,6 +71,9 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         err_msg = response.get("message", "")
         logger.error(f"TTS synthesis failed for sentence {self.sentence_id}: {err_code}, {err_msg}")
 
+
+
+    
     async def send_audio_chunk(self, audio_bytes):
         """Send individual audio chunks as they become available"""
         try:
@@ -66,8 +81,11 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
             if len(audio_bytes) < 100:
                 return
                 
-            # Convert to base64
-            b64_audio = base64.b64encode(audio_bytes).decode()
+            # Convert PCM to WAV format
+            wav_data = pcm_to_wav(self.audio_data, self.sample_rate)
+            
+            # Encode to base64
+            b64_audio = base64.b64encode(wav_data).decode()
             
             # Send to frontend immediately
             await self.fe_websocket.send_text(json.dumps({
