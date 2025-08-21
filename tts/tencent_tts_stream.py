@@ -52,6 +52,11 @@ def is_websocket_connected(websocket):
     except:
         return False
 
+import queue
+
+# Replace the global deque with a thread-safe queue
+audio_queue = queue.Queue()
+
 class OrderedSpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, sentence_id, fe_websocket):
         super().__init__()
@@ -60,14 +65,9 @@ class OrderedSpeechSynthesisListener(SpeechSynthesisListener):
         self.audio_data = b''
         self.start_time = time.time()
         self.chunk_count = 0
-        self.loop = asyncio.get_event_loop()
+        # REMOVE this line - it causes the error
+        # self.loop = asyncio.get_event_loop()
         self.is_complete = False
-
-    def on_synthesis_start(self, session_id):
-        logger.info(f"Synthesis started for sentence {self.sentence_id}")
-        self.audio_data = b''
-        self.is_complete = False
-        self.chunk_count = 0
 
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
@@ -78,8 +78,8 @@ class OrderedSpeechSynthesisListener(SpeechSynthesisListener):
         wav_chunk = pcm_to_wav(audio_bytes, SAMPLE_RATE)
         b64_audio = base64.b64encode(wav_chunk).decode()
         
-        # Enqueue the audio chunk with ordering information
-        audio_queue.append({
+        # Put item in thread-safe queue (no async operations here)
+        audio_queue.put({
             'sentence_id': self.sentence_id,
             'audio_data': b64_audio,
             'websocket': self.fe_websocket,
@@ -87,30 +87,21 @@ class OrderedSpeechSynthesisListener(SpeechSynthesisListener):
             'is_complete': False,
             'timestamp': time.time()
         })
-        
-        # Start queue processor if not running
-        global queue_processor_task
-        if queue_processor_task is None or queue_processor_task.done():
-            queue_processor_task = asyncio.create_task(process_audio_queue())
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
         self.is_complete = True
         processing_time = time.time() - self.start_time
         
-        # Enqueue completion marker
-        audio_queue.append({
+        # Put completion marker in queue
+        audio_queue.put({
             'sentence_id': self.sentence_id,
-            'audio_data': '',  # Empty data for completion marker
+            'audio_data': '',
             'websocket': self.fe_websocket,
-            'chunk_number': self.chunk_count + 1,  # Final chunk
+            'chunk_number': self.chunk_count + 1,
             'is_complete': True,
             'timestamp': time.time()
         })
-        
-        logger.info(f"Synthesis completed for sentence {self.sentence_id}: "
-                   f"{self.chunk_count} chunks, {len(self.audio_data)} bytes, "
-                   f"time: {processing_time:.2f}s")
 
     def on_synthesis_fail(self, response):
         super().on_synthesis_fail(response)
@@ -231,7 +222,11 @@ async def process_sentence(text, sentence_id, fe_websocket):
     """Process a single sentence asynchronously"""
     logger.info(f"Starting TTS for sentence {sentence_id}: {text[:50]}...")
     
-    listener = OrderedSpeechSynthesisListener(sentence_id, fe_websocket)
+    # Get the main event loop
+    main_loop = asyncio.get_event_loop()
+    listener = OrderedSpeechSynthesisListener(sentence_id, fe_websocket, main_loop)
+    """Process a single sentence asynchronously"""
+    logger.info(f"Starting TTS for sentence {sentence_id}: {text[:50]}...")
     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
     
     synthesizer = SpeechSynthesizer(
