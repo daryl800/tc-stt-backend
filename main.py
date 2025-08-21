@@ -17,7 +17,6 @@ from db.query_memory import search_past_events
 from tts.tencent_tts_stream import process_tts_stream
 from asr.transcription import webm_bytes_to_wav_path, transcribe_tencent
 from utils.comm_utils import reply_to_FE
-from tts.tencent_tts_stream import enqueue_audio
 from utils.filler_utils import pick_random_filler
 
 def extract_info_with_timing(transcription):
