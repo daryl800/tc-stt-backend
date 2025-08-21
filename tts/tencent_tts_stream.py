@@ -13,7 +13,7 @@ from utils.log import logger
 from utils.credential import Credential
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
-VOICETYPE = 101019  # Cantonese Female
+VOICETYPE = 101001  # 音色类型
 FASTVOICETYPE = ""
 CODEC = "pcm"  # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000  # 音频采样率：8000/16000
@@ -147,7 +147,7 @@ async def send_audio_to_frontend(websocket, base64_audio, sentence_id):
             await websocket.send_text(json.dumps({
                 "type": "audio",
                 "sentence_id": sentence_id,
-                "payload": base64_audio,
+                "data": base64_audio,
                 "format": "wav",
                 "sample_rate": SAMPLE_RATE,
                 "timestamp": time.time()
