@@ -237,20 +237,77 @@ def split_sentences(text: str):
 #         logger.warning(f"Failed to send completion message: {e}")
 
 async def process_tts_stream(full_text, fe_websocket):
-    """Process full text through TTS with SEQUENTIAL execution"""
+    """Process text with parallel synthesis but ordered sending"""
     logger.info(f"Starting TTS stream processing: {full_text[:100]}...")
     start_time = time.time()
     
     sentences = split_sentences(full_text)
     
-    # Process sentences SEQUENTIALLY
-    for idx, sentence in enumerate(sentences):
+    # Create a queue to collect results
+    results_queue = asyncio.Queue()
+    
+    async def process_sentence_parallel(sentence, idx):
+        """Process a sentence in parallel and put result in queue"""
         try:
-            logger.info(f"Processing sentence {idx+1}/{len(sentences)}")
-            await process_sentence(sentence, idx, fe_websocket)
+            listener = MySpeechSynthesisListener(idx, CODEC, SAMPLE_RATE, fe_websocket)
+            credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+            
+            synthesizer = SpeechSynthesizer(
+                TENCENT_APP_ID, credential_var, listener
+            )
+            synthesizer.set_text(sentence)
+            synthesizer.set_voice_type(VOICETYPE)
+            synthesizer.set_codec(CODEC)
+            synthesizer.set_sample_rate(SAMPLE_RATE)
+            synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
+            synthesizer.set_fast_voice_type(FASTVOICETYPE)
+            
+            # Run synthesizer in thread pool
+            await asyncio.get_event_loop().run_in_executor(
+                executor, run_synthesizer, synthesizer
+            )
+            
+            # Put result in queue
+            await results_queue.put((idx, listener.audio_data))
+            
         except Exception as e:
             logger.error(f"Failed to process sentence {idx}: {e}")
-            # Continue with next sentence
+            await results_queue.put((idx, None))
+    
+    # Start all tasks in parallel
+    tasks = []
+    for idx, sentence in enumerate(sentences):
+        task = asyncio.create_task(process_sentence_parallel(sentence, idx))
+        tasks.append(task)
+    
+    # Collect and send results IN ORDER
+    received_results = {}
+    next_expected_id = 0
+    
+    for _ in range(len(sentences)):
+        # Get the next completed result
+        idx, audio_data = await results_queue.get()
+        
+        if audio_data is not None:
+            received_results[idx] = audio_data
+            
+            # Send results in order as they become available
+            while next_expected_id in received_results:
+                wav_data = pcm_to_wav(received_results[next_expected_id], SAMPLE_RATE)
+                b64_audio = base64.b64encode(wav_data).decode()
+                
+                await fe_websocket.send_text(json.dumps({
+                    "type": "audio",
+                    "sentence_id": next_expected_id,
+                    "payload": b64_audio,
+                    "format": "wav",
+                    "sample_rate": SAMPLE_RATE,
+                    "size": len(wav_data)
+                }))
+                
+                logger.info(f"Sent audio for sentence {next_expected_id}")
+                del received_results[next_expected_id]
+                next_expected_id += 1
     
     processing_time = time.time() - start_time
     logger.info(f"Completed TTS stream processing in {processing_time:.2f} seconds")
