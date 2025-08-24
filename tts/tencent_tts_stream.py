@@ -160,30 +160,59 @@ def split_sentences(text: str):
     logger.info(f"Split text into {len(sentences)} sentences")
     return [s.strip() for s in sentences if s.strip()]
 
+# async def process_tts_stream(full_text, fe_websocket):
+#     """Process full text through TTS with parallel execution"""
+#     logger.info(f"Starting TTS stream processing: {full_text[:100]}...")
+#     start_time = time.time()
+    
+#     sentences = split_sentences(full_text)
+    
+#     # Create all TTS tasks to run in parallel
+#     tasks = []
+#     for idx, sentence in enumerate(sentences):
+#         task = asyncio.create_task(
+#             process_sentence(sentence, idx, fe_websocket)
+#         )
+#         tasks.append(task)
+    
+#     # Wait for all tasks to complete with timeout
+#     try:
+#         await asyncio.wait_for(asyncio.gather(*tasks), timeout=300)  # 5-minute timeout
+#     except asyncio.TimeoutError:
+#         logger.error("TTS processing timed out after 5 minutes")
+#         # Cancel all remaining tasks
+#         for task in tasks:
+#             if not task.done():
+#                 task.cancel()
+    
+#     processing_time = time.time() - start_time
+#     logger.info(f"Completed TTS stream processing in {processing_time:.2f} seconds")
+    
+#     # Send completion message
+#     try:
+#         await fe_websocket.send_text(json.dumps({
+#             "type": "tts_complete",
+#             "total_sentences": len(sentences),
+#             "processing_time": processing_time
+#         }))
+#     except Exception as e:
+#         logger.warning(f"Failed to send completion message: {e}")
+
 async def process_tts_stream(full_text, fe_websocket):
-    """Process full text through TTS with parallel execution"""
+    """Process full text through TTS with SEQUENTIAL execution"""
     logger.info(f"Starting TTS stream processing: {full_text[:100]}...")
     start_time = time.time()
     
     sentences = split_sentences(full_text)
     
-    # Create all TTS tasks to run in parallel
-    tasks = []
+    # Process sentences SEQUENTIALLY
     for idx, sentence in enumerate(sentences):
-        task = asyncio.create_task(
-            process_sentence(sentence, idx, fe_websocket)
-        )
-        tasks.append(task)
-    
-    # Wait for all tasks to complete with timeout
-    try:
-        await asyncio.wait_for(asyncio.gather(*tasks), timeout=300)  # 5-minute timeout
-    except asyncio.TimeoutError:
-        logger.error("TTS processing timed out after 5 minutes")
-        # Cancel all remaining tasks
-        for task in tasks:
-            if not task.done():
-                task.cancel()
+        try:
+            logger.info(f"Processing sentence {idx+1}/{len(sentences)}")
+            await process_sentence(sentence, idx, fe_websocket)
+        except Exception as e:
+            logger.error(f"Failed to process sentence {idx}: {e}")
+            # Continue with next sentence
     
     processing_time = time.time() - start_time
     logger.info(f"Completed TTS stream processing in {processing_time:.2f} seconds")
