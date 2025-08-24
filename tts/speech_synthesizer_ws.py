@@ -25,8 +25,8 @@ class SpeechSynthesisListener(object):
     def on_synthesis_end(self):
         logger.info("on_synthesis_end: -")
 
-    def on_audio_result(self, audio_bytes):
-        logger.info("on_audio_result: recv audio bytes, len={}".format(len(audio_bytes)))
+    # def on_audio_result(self, audio_bytes):
+        # logger.info("on_audio_result: recv audio bytes, len={}".format(len(audio_bytes)))
 
     def on_text_result(self, response):
         session_id = response["session_id"]
