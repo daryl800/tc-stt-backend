@@ -12,7 +12,7 @@ from utils.log import logger
 from utils.credential import Credential
 from config.constants import TENCENT_APP_ID, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
-VOICETYPE = 101001  # 音色类型
+VOICETYPE = 101019  # 音色类型
 FASTVOICETYPE = ""
 CODEC = "pcm"  # 音频格式：pcm/mp3
 SAMPLE_RATE = 16000  # 音频采样率：8000/16000
@@ -129,6 +129,30 @@ def run_synthesizer(synthesizer):
     synthesizer.start()
     synthesizer.wait()
 
+# async def process_sentence(text, sentence_id, fe_websocket):
+#     """Process a single sentence asynchronously"""
+#     logger.info(f"Starting TTS for sentence {sentence_id}: {text[:50]}...")
+    
+#     listener = MySpeechSynthesisListener(sentence_id, CODEC, SAMPLE_RATE, fe_websocket)
+#     credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+    
+#     synthesizer = SpeechSynthesizer(
+#         TENCENT_APP_ID, credential_var, listener
+#     )
+#     synthesizer.set_text(text)
+#     synthesizer.set_voice_type(VOICETYPE)
+#     synthesizer.set_codec(CODEC)
+#     synthesizer.set_sample_rate(SAMPLE_RATE)
+#     synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
+#     synthesizer.set_fast_voice_type(FASTVOICETYPE)
+    
+#     # Run synthesizer in thread pool to avoid blocking
+#     await asyncio.get_event_loop().run_in_executor(
+#         executor, run_synthesizer, synthesizer
+#     )
+    
+#     logger.info(f"Completed TTS for sentence {sentence_id}")
+
 async def process_sentence(text, sentence_id, fe_websocket):
     """Process a single sentence asynchronously"""
     logger.info(f"Starting TTS for sentence {sentence_id}: {text[:50]}...")
@@ -146,10 +170,24 @@ async def process_sentence(text, sentence_id, fe_websocket):
     synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
     synthesizer.set_fast_voice_type(FASTVOICETYPE)
     
-    # Run synthesizer in thread pool to avoid blocking
-    await asyncio.get_event_loop().run_in_executor(
-        executor, run_synthesizer, synthesizer
-    )
+    # Run synthesizer in thread pool with PROPER async waiting
+    loop = asyncio.get_event_loop()
+    try:
+        # Start the synthesizer and wait for completion with timeout
+        await loop.run_in_executor(
+            executor, 
+            lambda: synthesizer.start()  # Only start, don't wait here
+        )
+        
+        # Wait for completion with timeout
+        await asyncio.wait_for(
+            loop.run_in_executor(executor, synthesizer.wait),
+            timeout=30.0  # 30-second timeout per sentence
+        )
+        
+    except asyncio.TimeoutError:
+        logger.error(f"TTS synthesis timed out for sentence {sentence_id}")
+        synthesizer.stop()  # Stop the synthesizer if timeout
     
     logger.info(f"Completed TTS for sentence {sentence_id}")
 
