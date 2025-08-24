@@ -21,15 +21,38 @@ ENABLE_SUBTITLE = True
 # Thread pool for handling TTS requests - increased workers
 executor = ThreadPoolExecutor(max_workers=10)
 
-def pcm_to_wav(pcm_data, sample_rate=16000, sample_width=2, channels=1):
-    """Convert PCM data to WAV format with proper headers"""
+
+def pcm_to_wav(pcm_data, sample_rate):
+    """Convert PCM data to WAV format with proper header"""
+    import wave
+    import io
+    
+    # Create in-memory WAV file
     with io.BytesIO() as wav_buffer:
         with wave.open(wav_buffer, 'wb') as wav_file:
-            wav_file.setnchannels(channels)
-            wav_file.setsampwidth(sample_width)
+            wav_file.setnchannels(1)  # Mono
+            wav_file.setsampwidth(2)  # 16-bit PCM (2 bytes per sample)
             wav_file.setframerate(sample_rate)
             wav_file.writeframes(pcm_data)
+        
+        wav_buffer.seek(0)
         return wav_buffer.getvalue()
+
+def debug_wav_header(wav_data):
+    """Debug WAV file header"""
+    if len(wav_data) < 44:  # WAV header is 44 bytes
+        print(f"WAV data too short: {len(wav_data)} bytes")
+        return False
+    
+    # Check RIFF header
+    riff_header = wav_data[0:4].decode('ascii', errors='ignore')
+    wave_format = wav_data[8:12].decode('ascii', errors='ignore')
+    
+    print(f"RIFF header: {riff_header}")
+    print(f"WAVE format: {wave_format}")
+    print(f"Total WAV size: {len(wav_data)} bytes")
+    
+    return riff_header == 'RIFF' and wave_format == 'WAVE'
 
 class MySpeechSynthesisListener(SpeechSynthesisListener):
     def __init__(self, sentence_id, codec, sample_rate, fe_websocket):
@@ -75,12 +98,17 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         err_msg = response.get("message", "")
         logger.error(f"TTS synthesis failed for sentence {self.sentence_id}: {err_code}, {err_msg}")
 
+    # Use it in your send_complete_audio method:
     async def send_complete_audio(self, wav_data):
         """Send complete WAV audio to frontend"""
         try:
+            # Debug the WAV header
+            logger.info(f"WAV data length: {len(wav_data)} bytes")
+            debug_wav_header(wav_data)  # Add this line
+            
             # Convert to base64
             b64_audio = base64.b64encode(wav_data).decode()
-            
+
             # Send to frontend
             await self.fe_websocket.send_text(json.dumps({
                 "type": "audio",
