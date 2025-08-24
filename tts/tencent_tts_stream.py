@@ -70,10 +70,12 @@ class MySpeechSynthesisListener(SpeechSynthesisListener):
         logger.info(f"Synthesis started for sentence {self.sentence_id}, session: {session_id}")
         self.audio_data = b''
 
+# In your listener
     def on_audio_result(self, audio_bytes):
         super().on_audio_result(audio_bytes)
         self.audio_data += audio_bytes
         self.chunk_count += 1
+        logger.debug(f"Received audio chunk for sentence {self.sentence_id}, total: {len(self.audio_data)} bytes")
 
     def on_synthesis_end(self):
         super().on_synthesis_end()
@@ -242,14 +244,15 @@ async def process_tts_stream(full_text, fe_websocket):
     start_time = time.time()
     
     sentences = split_sentences(full_text)
-    
-    # Create a queue to collect results
     results_queue = asyncio.Queue()
     
     async def process_sentence_parallel(sentence, idx):
-        """Process a sentence in parallel and put result in queue"""
+        """Process a sentence in parallel"""
         try:
-            listener = MySpeechSynthesisListener(idx, CODEC, SAMPLE_RATE, fe_websocket)
+            # Create listener WITHOUT auto-sending
+            listener = MySpeechSynthesisListener(idx, CODEC, SAMPLE_RATE, None)  # No websocket!
+            listener.auto_send = False
+            
             credential_var = Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
             
             synthesizer = SpeechSynthesizer(
@@ -262,40 +265,38 @@ async def process_tts_stream(full_text, fe_websocket):
             synthesizer.set_enable_subtitle(ENABLE_SUBTITLE)
             synthesizer.set_fast_voice_type(FASTVOICETYPE)
             
-            # Run synthesizer in thread pool
+            # Run synthesizer
             await asyncio.get_event_loop().run_in_executor(
                 executor, run_synthesizer, synthesizer
             )
             
-            # Put result in queue
+            # Put ONLY the audio data in queue
             await results_queue.put((idx, listener.audio_data))
             
         except Exception as e:
             logger.error(f"Failed to process sentence {idx}: {e}")
             await results_queue.put((idx, None))
     
-    # Start all tasks in parallel
-    tasks = []
-    for idx, sentence in enumerate(sentences):
-        task = asyncio.create_task(process_sentence_parallel(sentence, idx))
-        tasks.append(task)
+    # Start all tasks
+    tasks = [asyncio.create_task(process_sentence_parallel(sentences[i], i)) 
+             for i in range(len(sentences))]
     
     # Collect and send results IN ORDER
     received_results = {}
     next_expected_id = 0
     
     for _ in range(len(sentences)):
-        # Get the next completed result
         idx, audio_data = await results_queue.get()
         
         if audio_data is not None:
             received_results[idx] = audio_data
             
-            # Send results in order as they become available
+            # Send in order
             while next_expected_id in received_results:
                 wav_data = pcm_to_wav(received_results[next_expected_id], SAMPLE_RATE)
                 b64_audio = base64.b64encode(wav_data).decode()
                 
+                # Send only once!
                 await fe_websocket.send_text(json.dumps({
                     "type": "audio",
                     "sentence_id": next_expected_id,
@@ -309,15 +310,14 @@ async def process_tts_stream(full_text, fe_websocket):
                 del received_results[next_expected_id]
                 next_expected_id += 1
     
+    # Wait for all tasks to complete
+    await asyncio.gather(*tasks, return_exceptions=True)
+    
     processing_time = time.time() - start_time
     logger.info(f"Completed TTS stream processing in {processing_time:.2f} seconds")
     
-    # Send completion message
-    try:
-        await fe_websocket.send_text(json.dumps({
-            "type": "tts_complete",
-            "total_sentences": len(sentences),
-            "processing_time": processing_time
-        }))
-    except Exception as e:
-        logger.warning(f"Failed to send completion message: {e}")
+    await fe_websocket.send_text(json.dumps({
+        "type": "tts_complete",
+        "total_sentences": len(sentences),
+        "processing_time": processing_time
+    }))
