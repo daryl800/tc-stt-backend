@@ -195,7 +195,7 @@ async def process_sentence(text, sentence_id, fe_websocket):
 
 def split_sentences(text: str):
     """Split Chinese/English text into sentences"""
-    pattern = r'[。！？.!?\n]+'
+    pattern = r'[，。！？,.!?\n]+'
     sentences = re.split(pattern, text)
     logger.info(f"Split text into {len(sentences)} sentences")
     return [s.strip() for s in sentences if s.strip()]
