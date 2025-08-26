@@ -99,7 +99,7 @@ def calculate_cantonese_date(text: str, base_date: datetime = None) -> datetime:
     print(f"hour: {hour}")
     print(f"minute: {minute}")
     if hour is None:
-        return
+        hour = 9
     if minute is None:
         minute = 0
 
