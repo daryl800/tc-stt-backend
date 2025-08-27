@@ -38,7 +38,6 @@ app.include_router(transcribe_router, prefix="/transcribe")
 def read_root():
     return {"message": "Health check ... AI-Buddy backend is running"}
 
-
 @app.on_event("startup")
 async def startup_event():
     print("🚀 Backend starting up")
