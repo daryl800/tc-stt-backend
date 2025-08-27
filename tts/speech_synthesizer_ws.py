@@ -27,7 +27,7 @@ class SpeechSynthesisListener(object):
 
     def on_audio_result(self, audio_bytes):
         # logger.info("on_audio_result: recv audio bytes, len={}".format(len(audio_bytes)))
-        a=1
+        pass
 
     def on_text_result(self, response):
         session_id = response["session_id"]
@@ -37,8 +37,8 @@ class SpeechSynthesisListener(object):
         subtitles = []
         if "subtitles" in result and len(result["subtitles"]) > 0:
             subtitles = result["subtitles"]
-        logger.info("on_text_result: session_id={} request_id={} message_id={}\nsubtitles={}".format(
-            session_id, request_id, message_id, subtitles))
+        # logger.info("on_text_result: session_id={} request_id={} message_id={}\nsubtitles={}".format(
+        #     session_id, request_id, message_id, subtitles))
 
     def on_synthesis_fail(self, response):
         logger.error("on_synthesis_fail: code={} msg={}".format(
