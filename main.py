@@ -45,7 +45,7 @@ async def transcribe_workflow(base64_audio_str: str):
 async def process_message(websocket: WebSocket, msg_type: str, payload: str):
     if not payload:
         print("⚠️ Skipping empty payload")
-    return
+        return
     try:
         # --- Step A: Decode audio or read text
         if msg_type == "audio":
