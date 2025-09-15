@@ -349,8 +349,8 @@ def generate_reflection(query: str) -> str:
 
         if is_websearch_needed(query):
             messages = [
-                {"Role": "system", "Content": system_prompt},
-                {"Role": "user", "Content": user_prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
             use_client = GROQ_CLIENT
             use_model = GROQ_LLM_MODEL_WITH_SEARCH
@@ -368,8 +368,8 @@ def generate_reflection(query: str) -> str:
 
         else:
             messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"Role": "system", "Content": system_prompt},
+                {"Role": "user", "Content": user_prompt}
             ]
 
             use_model = HUNYUAN_LLM_MODEL
