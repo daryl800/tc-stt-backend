@@ -368,7 +368,7 @@ def generate_reflection(query: str) -> str:
             # result = response.choices[0].message.content.strip()
 
             conn = http.client.HTTPSConnection("metaso.cn")
-            payload = json.dumps({"model": "fast", "messages": [{"role": "user", "content": "現任美國總統是誰？"}]})
+            payload = json.dumps({"model": "fast", "messages": [{"role": "user", "content": query}]})
             headers = {
             'Authorization': 'Bearer ' + METASO_API_KEY,
             'Accept': 'application/json',
@@ -376,9 +376,9 @@ def generate_reflection(query: str) -> str:
             }
             conn.request("POST", "/api/v1/chat/completions", payload, headers)
             res = conn.getresponse()
-            data = res.read() 
-
-            result = data.decode("utf-8")
+            data = res.read().decode("utf-8")  # Decode byte string to string
+            json_data = json.loads(data)       # Parse string to JSON object
+            result = json_data['choices'][0]['message']['content'].strip()  # Access content field
 
         else:
             messages = [
