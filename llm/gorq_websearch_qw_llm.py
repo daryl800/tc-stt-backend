@@ -344,15 +344,14 @@ def generate_reflection(query: str) -> str:
                 f"回答用戶問題：{query}"
             )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-
         # TODO: keep it for reference for the moment
         # use_model = GROQ_LLM_MODEL_WITH_SEARCH if is_websearch_needed(query) else GROQ_LLM_MODEL_318b
 
         if is_websearch_needed(query):
+            messages = [
+                {"Role": "system", "Content": system_prompt},
+                {"Role": "user", "Content": user_prompt}
+            ]
             use_client = GROQ_CLIENT
             use_model = GROQ_LLM_MODEL_WITH_SEARCH
 
@@ -368,6 +367,11 @@ def generate_reflection(query: str) -> str:
             result = response.choices[0].message.content.strip()
 
         else:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+
             use_model = HUNYUAN_LLM_MODEL
 
             print(f"[DEBUG] using model: {use_model}")
