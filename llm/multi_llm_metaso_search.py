@@ -378,7 +378,11 @@ def generate_reflection(query: str) -> str:
             res = conn.getresponse()
             data = res.read().decode("utf-8")  # Decode byte string to string
             json_data = json.loads(data)       # Parse string to JSON object
-            result = json_data['choices'][0]['message']['content'].strip()  # Access content field
+            content = json_data['choices'][0]['message']['content'].strip()  # Access content field
+            # Use regex to remove all [[number]] patterns
+            result = re.sub(r'\[\[\d+\]\]', '', content)
+
+            print(f"[INFO] result from Metaso: {result}")
 
         else:
             messages = [
@@ -404,7 +408,7 @@ def generate_reflection(query: str) -> str:
                 raise ValueError("No response from model")
 
 
-        print(f"[INFO] result: {result}")
+            print(f"[INFO] result from HunYuan: {result}")
 
         return result
 
