@@ -32,7 +32,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_json()
-                print("📥 Received payload:", data)
+                print("📥 Received data type:", data.get("type"))
             except WebSocketDisconnect:
                 print("❌ WebSocket disconnected")
                 break
