@@ -11,3 +11,5 @@ LEANCLOUD_MASTER_KEY = os.getenv("LEANCLOUD_MASTER_KEY")  # optional, for admin 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 ALI_CLOUD_API_KEY = os.getenv("ALI_CLOUD_API_KEY")
+
+METASO_API_KEY = os.getenv("METASO_API_KEY")
