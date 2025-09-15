@@ -1,6 +1,7 @@
 import re
 import json
 import time
+import http.client
 import dashscope
 from groq import Groq
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ from tencentcloud.common import credential
 from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
-from config.constants import GROQ_API_KEY, ALI_CLOUD_API_KEY, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
+from config.constants import GROQ_API_KEY, ALI_CLOUD_API_KEY, TENCENT_SECRET_ID, TENCENT_SECRET_KEY, METASO_API_KEY
 
 GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
 GROQ_LLM_MODEL_318b = "llama-3.1-8b-instant"
@@ -348,23 +349,36 @@ def generate_reflection(query: str) -> str:
         # use_model = GROQ_LLM_MODEL_WITH_SEARCH if is_websearch_needed(query) else GROQ_LLM_MODEL_318b
 
         if is_websearch_needed(query):
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-            use_client = GROQ_CLIENT
-            use_model = GROQ_LLM_MODEL_WITH_SEARCH
+            # messages = [
+            #     {"role": "system", "content": system_prompt},
+            #     {"role": "user", "content": user_prompt}
+            # ]
+            # use_client = GROQ_CLIENT
+            # use_model = GROQ_LLM_MODEL_WITH_SEARCH
 
-            print(f"[DEBUG] using model: {use_model}")
+            # print(f"[DEBUG] using model: {use_model}")
 
-            response = use_client.chat.completions.create(
-                model=use_model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=300
-            )
+            # response = use_client.chat.completions.create(
+            #     model=use_model,
+            #     messages=messages,
+            #     temperature=0.7,
+            #     max_tokens=300
+            # )
 
-            result = response.choices[0].message.content.strip()
+            # result = response.choices[0].message.content.strip()
+
+            conn = http.client.HTTPSConnection("metaso.cn")
+            payload = json.dumps({"model": "fast", "messages": [{"role": "user", "content": "現任美國總統是誰？"}]})
+            headers = {
+            'Authorization': 'Bearer ' + METASO_API_KEY,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+            }
+            conn.request("POST", "/api/v1/chat/completions", payload, headers)
+            res = conn.getresponse()
+            data = res.read() 
+
+            result = data.decode("utf-8")
 
         else:
             messages = [

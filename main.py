@@ -11,7 +11,7 @@ from dateutil import parser
 from fastapi import WebSocket
 from fastapi.encoders import jsonable_encoder
 from tts.tencent_tts_short import tencent_tts, group_segments_by_limit
-from llm.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflection
+from llm.multi_llm_metaso_search import extract_info_withLLM, generate_reflection
 from db.db_utils import save_to_leancloud_async
 from db.query_memory import search_past_events
 from tts.tencent_tts_stream import process_tts_stream

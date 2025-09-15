@@ -17,7 +17,7 @@ from tencentcloud.common import credential
 from tencentcloud.asr.v20190614 import asr_client, models as asr_models
 from tencentcloud.tts.v20190823 import tts_client, models as tts_models
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import TencentCloudSDKException
-from llm.gorq_websearch_qw_llm import extract_info_withLLM, generate_reflection
+from llm.multi_llm_metaso_search import extract_info_withLLM, generate_reflection
 from db.db_utils import save_to_leancloud_async  # assuming you placed the function here
 from db.query_memory import search_past_events  # assuming you placed the function here
 
