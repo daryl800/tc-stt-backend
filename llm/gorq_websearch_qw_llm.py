@@ -5,12 +5,35 @@ import dashscope
 from groq import Groq
 from datetime import datetime, timedelta
 from models.memory_item import MemoryItem
-from config.constants import GROQ_API_KEY, ALI_CLOUD_API_KEY
+from tencentcloud.common import credential
+from tencentcloud.common.profile.client_profile import ClientProfile
+from tencentcloud.common.profile.http_profile import HttpProfile
+from tencentcloud.hunyuan.v20230901 import hunyuan_client, models
+from config.constants import GROQ_API_KEY, ALI_CLOUD_API_KEY, TENCENT_SECRET_ID, TENCENT_SECRET_KEY
 
 GROQ_CLIENT = Groq(api_key=GROQ_API_KEY)
 GROQ_LLM_MODEL_318b = "llama-3.1-8b-instant"
 GROQ_LLM_MODEL_WITH_SEARCH = "compound-beta"
 QIANWEN_LLM_MODEL_FLASH = "qwen-flash"
+HUNYUAN_LLM_MODEL = "hunyuan-standard"
+
+# Initialize Hunyuan client (singleton pattern)
+_hunyuan_client = None
+
+def get_hunyuan_client():
+    global _hunyuan_client
+    if _hunyuan_client is None:
+        try:
+            cred = credential.Credential(TENCENT_SECRET_ID, TENCENT_SECRET_KEY)
+            http_profile = HttpProfile(
+                endpoint="hunyuan.ap-hongkong.tencentcloudapi.com")
+            client_profile = ClientProfile(httpProfile=http_profile)
+            _hunyuan_client = hunyuan_client.HunyuanClient(
+                cred, "ap-hongkong", client_profile)
+        except Exception as e:
+            print(f"初始化混元客户端失败: {e}")
+            raise  # 或返回 None，根据业务需求处理
+    return _hunyuan_client
 
 # Simplified keyword sets (after normalization)
 TOMORROW_KEYWORDS = {"聽日", "聽朝", "聽晚", "聽日中午", "聽日晚上", "明日", "明朝", "明晚", "明日中午", "聽日晚上" }
@@ -302,6 +325,8 @@ if __name__ == "__main__":
 
 def generate_reflection(query: str) -> str:
     try:
+        hy_client = get_hunyuan_client()
+
         detected_date = calculate_cantonese_date(query) if is_date_related(query) else None
 
         date_str = detected_date.strftime("%Y年%m月%d號") if detected_date else ""
@@ -324,19 +349,45 @@ def generate_reflection(query: str) -> str:
             {"role": "user", "content": user_prompt}
         ]
 
-        use_model = GROQ_LLM_MODEL_WITH_SEARCH if is_websearch_needed(query) else GROQ_LLM_MODEL_318b
+        # TODO: keep it for reference for the moment
+        # use_model = GROQ_LLM_MODEL_WITH_SEARCH if is_websearch_needed(query) else GROQ_LLM_MODEL_318b
 
-        print(f"[DEBUG] using model: {use_model}")
+        if is_websearch_needed(query):
+            use_client = GROQ_CLIENT
+            use_model = GROQ_LLM_MODEL_WITH_SEARCH
 
-        response = GROQ_CLIENT.chat.completions.create(
-            model=use_model,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=300
-        )
+            print(f"[DEBUG] using model: {use_model}")
 
-        result = response.choices[0].message.content.strip()
-        print(f"[DEBUG] Reflection result: {result}")
+            response = use_client.chat.completions.create(
+                model=use_model,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=300
+            )
+
+            result = response.choices[0].message.content.strip()
+
+        else:
+            use_model = HUNYUAN_LLM_MODEL
+
+            print(f"[DEBUG] using model: {use_model}")
+        
+            req = models.ChatCompletionsRequest()
+            req.Model = use_model
+            req.Temperature = 0.7
+            req.Messages = messages
+
+            resp = hy_client.ChatCompletions(req)
+
+            if resp.Choices and resp.Choices[0].Message:
+                result = resp.Choices[0].Message.Content.strip()
+            else:
+                result = "Sorry no suggestions!!!"
+                raise ValueError("No response from model")
+
+
+        print(f"[INFO] result: {result}")
+
         return result
 
     except Exception as e:
