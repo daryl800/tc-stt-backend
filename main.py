@@ -108,8 +108,8 @@ async def process_message(websocket: WebSocket, msg_type: str, payload: str):
             reflection = await reflection_task
             # reflection_tts_task = asyncio.to_thread(tencent_tts, reflection)
             # TODO: temporaly disable Tencent TTS to save resources
-            # asyncio.create_task(process_tts_stream(reflection, websocket))
-
+            # TODO: enable back 2025-09-28
+            asyncio.create_task(process_tts_stream(reflection, websocket))
 
             # 這時 extract_task 可能還沒跑完，沒關係
             extraction = await extract_task
